@@ -1,0 +1,32 @@
+#!/bin/bash
+#PBS -N paml_branch_site
+#PBS -q batch
+#PBS -l nodes=1:ppn=3
+#PBS -l mem=9gb
+#PBS -o illumina-00-priv:/export/scripts/pbs_out/
+#PBS -e illumina-00-priv:/export/scripts/pbs_out/
+
+## Variables to pass 
+#prot : prot name
+#mark : mark
+#tree : tree file
+#prefix : prefix for output
+
+mark=$(echo "$mark" | sed -e 's/bbb/,,/g')
+
+aln=${prot}.fa
+
+folder=/export/work/batnipah/phylogeny/selection/pre_analyse/
+
+cd ${folder}/$prot
+
+echo "Job started on $HOSTNAME at time : $(date)"
+
+echo "ete3 evol --noimg -t $tree --alg $aln -o ${prefix}_branch-site --mark $mark --models bsA bsA1 M1 --tests bsA,M1 bsA,bsA1 --cpu 3 > ${prefix}_branch-site.out"
+echo "cat ${prefix}_branch-site.out | grep -e LRT -A 10 | grep -e ' 0\.[0-9]*' -e ' 1\.[0-9]*' -o > ${prefix}_branch-site.pval"
+
+ete3 evol --noimg -t $tree --alg $aln -o ${prefix}_branch-site --mark $mark --models bsA bsA1 M1 --tests bsA,M1 bsA,bsA1 --cpu 3 > ${prefix}_branch-site.out
+cat ${prefix}_branch-site.out | grep -e LRT -A 10 | grep -e ' 0\.[0-9]*' -e ' 1\.[0-9]*' -o > ${prefix}_branch-site.pval
+
+echo "Job finished on $HOSTNAME at time : $(date)"
+

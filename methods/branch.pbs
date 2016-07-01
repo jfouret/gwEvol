@@ -1,0 +1,36 @@
+#!/bin/bash
+#PBS -N paml_branch
+#PBS -q batch
+#PBS -l nodes=1:ppn=4
+#PBS -l mem=12gb
+#PBS -o illumina-00-priv:/export/scripts/pbs_out/
+#PBS -e illumina-00-priv:/export/scripts/pbs_out/
+
+## Variables to pass 
+#prot : prot name
+#mark : mark
+#tree : tree file
+#prefix : prefix for output
+
+mark=$(echo "$mark" | sed -e 's/bbb/,,/g')
+
+aln=${prot}.fa
+
+
+
+folder=/export/work/batnipah/phylogeny/selection/pre_analyse/
+
+cd ${folder}/$prot
+
+echo "Job started on $HOSTNAME at time : $(date)"
+
+echo "$prot ${prefix}"
+
+ete3 evol --noimg -t $tree --alg $aln -o ${prefix}_branch --mark $mark --models fb fb_anc b_free M0 --tests b_free,M0 fb,M0 fb_anc,M0 --cpu 2 > ${prefix}_branch.out
+cat ${prefix}_branch.out | grep -e LRT -A 10 | grep -e ' 0\.[0-9]*' -e ' 1\.[0-9]*'  -o > ${prefix}_branch.pval
+
+mark=$(echo "$mark" | sed -e 's/,,/bbb/g')
+
+#qsub ${folder}/branch_site.pbs -v prot="${prot}",mark="${mark}",tree="${tree}",prefix="${prefix}"
+
+echo "Job finished on $HOSTNAME at time : $(date)"
