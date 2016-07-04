@@ -50,7 +50,8 @@ mark='bbb'.join(markList)
 #bbb used on mathods script for as separator
 if args.target=='automatic':
 	prefix='_'.join(markList)
-
+else:
+	prefix=args.target
 #list of gene for subsetting
 subset=False
 if args.subset!='None':
@@ -63,6 +64,7 @@ if args.subset!='None':
 	subsetFile.close()
 
 #Creer un dico pour les alnFile
+os.chdir(alnRepo)
 rName='/([a-zA-Z0-9_.@ :]*)-[^/]*.$'
 alnFileDict=dict()
 for file in os.listdir(alnRepo):
@@ -111,16 +113,16 @@ for keys in alnFileDict:
 #print report & metadatas
 os.chdir('logs')
 with open ('tree.metadata', "w") as logFile:
-	logFile.write("\n".join(treeMeta))
+	logFile.write("".join(treeMeta))
 shutil.copy(treeFile,'tree')
 with open ('alignments.metadata', "w") as logFile:
-	logFile.write("\n".join(alnRepoMeta))	
+	logFile.write("".join(alnRepoMeta))	
 with open ('branchJobs.txt', "w") as logFile:
 	for keys in bJobs:
-		logFile.write(keys+": "+bJobs[keys]+"\n")
+		logFile.write(keys+": "+bJobs[keys])
 with open ('branchSiteJobs.txt', "w") as logFile:
         for keys in bsJobs:
-                logFile.write(keys+": "+bsJobs[keys]+"\n")
+                logFile.write(keys+": "+bsJobs[keys])
 with open ('target.txt','w') as logFile:
 	logFile.write('Target species: '+args.mark)
 
