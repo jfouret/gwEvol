@@ -16,6 +16,7 @@ parser.add_argument('-alnRepo', metavar='/path', required=True, help="alignement
 parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
 parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
 parser.add_argument('-pipelineRoot', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git', required=False, help="Root folder of the pipeline for positive selection analysis")
+parser.add_argument('-target', metavar='target',default='automatic', required=False, help="Names of target group")
 parser.add_argument('-queue', metavar='name',default='long7', required=False, help="Queue for qsub")
 parser.add_argument('-subset', metavar='/path',default='None', required=False, help="file with a list of gene name to consider (only)")
 parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file with newick format")
@@ -27,20 +28,28 @@ import re
 import os
 import subprocess
 
-outDir=os.path.absPath(args.outDir)
-treeFile=os.path.absPath(agrs.tree)
-if os.exists(args.tree+'.metadata'):
+def mkdirp(path):
+	if not os.path.exists(path):
+		os.makedirs(path)
+
+outDir=os.path.abspath(args.outDir)
+treeFile=os.path.abspath(args.tree)
+treeMeta=list('No metadatas')
+if os.path.exists(args.tree+'.metadata'):
 	with open (args.tree+'.metadata', "r") as metadataFile:
 		treeMeta=metadataFile.readlines()
-alnRepo=os.path.absPath(args.alnRepo)
-if os.exists(args.alnRepo+'.metadata'):
+alnRepo=os.path.abspath(args.alnRepo)
+alnRepoMeta=list('No metadatas')
+if os.path.exists(args.alnRepo+'.metadata'):
 	with open (args.alnRepo+'.metadata', "r") as metadataFile:
 		alnRepoMeta=metadataFile.readlines()
-os.makedirs(outDir+'/logs',exist_ok=True)
+mkdirp(outDir+'/logs')
 errorFile=open(outDir+'/logs/error','w')
 markList=args.mark.split(',')
 mark='bbb'.join(markList)
 #bbb used on mathods script for as separator
+if args.target=='automatic':
+	prefix='_'.join(markList)
 
 #list of gene for subsetting
 subset=False
@@ -54,12 +63,12 @@ if args.subset!='None':
 	subsetFile.close()
 
 #Creer un dico pour les alnFile
-rName='/([a-zA-Z0-9]+)-[^/].$'
+rName='/([a-zA-Z0-9_.@ :]*)-[^/]*.$'
 alnFileDict=dict()
-for file in os.listdir("/mydir"):
+for file in os.listdir(alnRepo):
 	if file.endswith(".fa") or file.endswith(".fasta") or file.endswith(".fna"):
-        	fileAbs=os.path.absPath(file)
-		m=re.match(rName,fileAbs)
+        	fileAbs=os.path.abspath(file)
+		m=re.search(rName,fileAbs)
 		if m:
 			key=m.group(1)
 			if subset:
@@ -68,7 +77,7 @@ for file in os.listdir("/mydir"):
 			else:
 				alnFileDict[key]=fileAbs
 		else:
-			errorFile.write("WARNING: "+fileAbs+" do not allow retrieval of gene Name '/([a-zA-Z0-9]+)-[^/].$'\n")
+			errorFile.write("WARNING: "+fileAbs+" do not allow retrieval of gene Name '"+rName+"'\n")
 
 
 #Subset in alnFileDict based on keys
@@ -76,20 +85,24 @@ for file in os.listdir("/mydir"):
 
 # definir les processeurs dans la methodes
 def runAnalysis(alnFile,method):
-	toSubmit='qsub '+args.pipelineRoot+'/methods'+method+'.pbs -v prot="'+alnFile+'",mark="'+mark+'",tree="'+treeFile+'",prefix="'+args.prefix+'" -d $PWD -q '+args.queue+' -N '+alnFile+'_'+method
+	toSubmit='qsub '+args.pipelineRoot+'/methods/'+method+'.pbs -v prot="'+alnFile+'",mark="'+mark+'",tree="'+treeFile+'",prefix="'+prefix+'" -d $PWD -q '+args.queue+' -N '+alnFile+'_'+method
 	child=subprocess.Popen(toSubmit,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 	output,error=child.communicate()
-	return(output)
-	
+	if error!='':
+		errorFile.write('WARNING: when submitting '+alnFile+ ' with '+method+' method:'+"\n"+error)
+		return(error)
+	else:
+		return(output)
+
 #Se mettre dans le dossier output
-os.makedirs(outDir,exist_ok=True)
+mkdirp(outDir)
 os.chdir(outDir)
 
 #Launch jobs
 bsJobs=dict()
 bJobs=dict()
 for keys in alnFileDict:
-	os.makedirs(keys,exist_ok=True)
+	mkdirp(keys)
 	os.chdir(keys)
 	bsJobs[keys]=runAnalysis(alnFileDict[keys],'branch')
 	bJobs[keys]=runAnalysis(alnFileDict[keys],'branch_site')

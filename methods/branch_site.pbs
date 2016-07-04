@@ -9,7 +9,7 @@
 
 mark=$(echo "$mark" | sed -e 's/bbb/,,/g')
 
-aln=${prot}.fa
+aln=${prot}
 
 echo "Job started on $HOSTNAME at time : $(date)"
 
