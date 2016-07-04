@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N paml_branch_site
+#PBS -l nodes=1:ppn=3
 
 ## Variables to pass 
 #prot : prot name
