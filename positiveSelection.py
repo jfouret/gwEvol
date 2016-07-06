@@ -38,24 +38,28 @@ def mkdirp(path):
 outDir=os.path.abspath(args.outDir)
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
-treeMeta=list('No metadatas')
+treeMeta=list()
+treeMeta.append('No metadatas')
 if os.path.exists(args.tree+'.metadata'):
 	with open (args.tree+'.metadata', "r") as metadataFile:
 		treeMeta=metadataFile.readlines()
 alnRepo=os.path.abspath(args.alnRepo)
-alnRepoMeta=list('No metadatas')
+alnRepoMeta=list()
+alnRepoMeta.append('No metadatas')
 if os.path.exists(args.alnRepo+'.metadata'):
 	with open (args.alnRepo+'.metadata', "r") as metadataFile:
 		alnRepoMeta=metadataFile.readlines()
 
 pbsDir=outDir+'/pbs'
 logDir=outDir+'/logs'
+pbsLogDir=outDir+'/pbsLogs'
 pamlDir=outDir+'/paml'
 
 mkdirp(outDir)
 mkdirp(pamlDir)
 mkdirp(pbsDir)
 mkdirp(logDir)
+mkdirp(pbsLogDir)
 
 errorFile=open(logDir+'/error','w')
 markList=args.mark.split(',')
@@ -112,8 +116,8 @@ for file in os.listdir(alnRepo):
 
 def submitAnalysis(batchDict,batchName):
 	pbsFilePath=pbsDir+'/'+batchName+'.pbs'
-	pbsErr=args.pbsServer+':'+logDir+'/'+batchName+'.pbsErr'
-	pbsOut=args.pbsServer+':'+logDir+'/'+batchName+'.pbsOut'
+	pbsErr=args.pbsServer+':'+pbsLogDir+'/'+batchName+'.pbsErr'
+	pbsOut=args.pbsServer+':'+pbsLogDir+'/'+batchName+'.pbsOut'
 	qsub='qsub '+pbsFilePath+' -d "$PWD" -q '+args.queue+' -N '+batchName+' -l nodes=1:ppn=1 -o '+pbsOut+' -e '+pbsErr
 	start='echo "Job started on $HOSTNAME at time : $(date)"'
 	end='echo "Job finished on $HOSTNAME at time : $(date)"'
@@ -158,26 +162,28 @@ else:
 
 batchJobs=dict()
 count=0
-batchNumero=1
+batchNumber=1
 batchDict=dict()
+lastKey=alnFileDict.keys()[-1]
 for keys in alnFileDict:
 	count+=1
 	batchDict[keys]=alnFileDict[keys]
-	if count==batch:
-		batchName='Batch_'+str(batchNumero)
+	if count==batch or keys==lastKey:
+		batchName='Batch_'+str(batchNumber)
 		count=0
-		batchNumero+=1
+		batchNumber+=1
 		batchJobs[batchName]=submitAnalysis(batchDict,batchName)
 		batchDict=dict()
 
 #print report & metadatas
 os.chdir(logDir)
 with open ('tree.metadata', "w") as logFile:
+	logFile.write("path of the tree: "+treeFile+"\n")
 	logFile.write("".join(treeMeta))
 shutil.copy(treeFile,'tree')
 with open ('alignments.metadata', "w") as logFile:
-	logFile.write("path of the repository for alignments: "+alnRepo)
-	logFile.write("".join(alnRepoMeta))	
+	logFile.write("path of the repository for alignments: "+alnRepo+"\n")
+	logFile.write("".join(alnRepoMeta))
 #with open ('branchJobs.txt', "w") as logFile:
 #	for keys in bJobs:
 #		logFile.write(keys+": "+bJobs[keys])
