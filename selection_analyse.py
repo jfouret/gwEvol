@@ -1,26 +1,32 @@
 #!/usr/bin/python
 
 import argparse
-import re 
-import sys
 
-version=1.0
+version=1.1
 year=2016
 author='Julien Fouret'
 contact='julien.fouret12@uniagro.fr'
 
 ##parse argument
 parser = argparse.ArgumentParser(description='allow',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('-file', metavar='list of files', required=True, help="path of the 'out' files from ete3")
-parser.add_argument('-results', metavar='results file', required=True, help="file to write all the results")
+parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
+parser.add_argument('-result', metavar='results file', required=True, help="file to write all the results")
 
 args=parser.parse_args()
 
+import re
+import sys
+import glob
+import os
+
 #function
+def mkdirp(path):
+        if not os.path.exists(path):
+                os.makedirs(path)
+
 def read_model(path,model,target,name):
-
 	file=open(path,'r')
-
+	[w0,w1,w2,p0,p1,p2a,p2b,lnL]=['err','err','err','err','err','err','err','err']
 	for line in file:
 
 		newline=line.rstrip('\n')
@@ -84,30 +90,46 @@ def read_model(path,model,target,name):
 				omega=romega.match(newline).group(1)
 	file.close
 	if model == 'b_free':
-		return [name,model,target,w0,w1,'NA','NA','NA','NA','NA',lnL]
+		toReturn=[name,model,target,w0,w1,'NA','NA','NA','NA','NA',lnL]
 	elif model == 'M1':
-		return [name,model,'NA',w0,w1,'NA',p0,p1,'NA','NA',lnL]
+		toReturn=[name,model,'NA',w0,w1,'NA',p0,p1,'NA','NA',lnL]
 	elif model == 'bsA':
-		return [name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
+		toReturn=[name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
 	elif model == 'bsA1':	
-		return [name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
+		toReturn=[name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
 	else:
-		return [name,model,'NA',omega,'NA','NA','NA','NA','NA','NA',lnL]
+		toReturn=[name,model,'NA',omega,'NA','NA','NA','NA','NA','NA',lnL]
+	if 'err' in toReturn:
+		errorFile.write('WARNING parsing results of gene '+name+' in target '+target+' with model '+model+"\n")
+	return(toReturn)
 
-rout=re.compile('([^\/]+)\/([^\/]+)_branch[^\/]*\/([^\.]+).*\/out')
+#TODO add metadatas
 
-results=open(args.results,'w')
-list_out=open(args.file,'r')
-results.write('\t'.join(['gene_name','model','target','w0','w1','w2','p0','p1','p2a','p2b','lnL'])+"\n")
-for line in list_out.readlines():
-	newline = line.rstrip('\n')
-	if rout.match(newline):
-		name=rout.match(newline).group(1)
-		target=rout.match(newline).group(2)
-		model=rout.match(newline).group(3)
+outDir=os.path.abspath(args.outDir)
+
+pamlDir=outDir+'/paml/'
+resDir=outDir+'/results/'
+
+resultFile=resDir+'parameters.tab'
+regExOutPath=re.compile('([^\/]+)\/([^\/]+)\/([^\.]+).*\/out')
+resultFile=open(resultFile,'w')
+resultFile.write('\t'.join(['gene_name','model','target','w0','w1','w2','p0','p1','p2a','p2b','lnL'])+"\n")
+
+
+#error
+errorFile=open(outDir+'/logs/error','a')
+
+os.chdir(pamlDir)# in paml dir for glob ! ! !
+for fileName in glob.glob('*/*/*/out'):
+	m=regExOutPath.match(fileName)
+	if m:
+		name=m.group(1)
+		target=m.group(2)
+		model=m.group(3)
 		if model == 'M0' or model == 'M1' or model == 'b_free' or model == 'bsA' or model == 'bsA1':
-			li=read_model(newline,model,target,name)
-			results.write('\t'.join(li)+"\n")
-			
-list_out.close()
-results.close()
+			line=read_model(fileName,model,target,name)
+			resultFile.write('\t'.join(line)+"\n")
+resultFile.close()
+errorFile.close()
+
+
