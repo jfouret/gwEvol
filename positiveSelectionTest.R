@@ -33,42 +33,51 @@ parser$add_argument("-graphSign",
                     help="graph parameters distribution for all significant results")
 args <- parser$parse_args()
 
+# LOADING LIBRARIES
+suppressMessages(library(ggthemes))
+suppressMessages(library(ggplot2))
+suppressMessages(library(gridExtra))
+suppressMessages(library(cowplot))
+suppressMessages(library(gplots))
+suppressMessages(library(tidyr))
+suppressMessages(source(args$evolPack))
+suppressMessages(source(args$vennPack))
+suppressMessages(library(R.utils))
+
 #DEFINE PARAMETERS
 outDir=getAbsolutePath(args$outDir)
 statDir=paste(outDir,'stats',sep='/')
 resDir=paste(outDir,'results',sep='/')
+dir.create(statDir,recursive=T)
 setwd(statDir)
 parametersFileName=paste(resDir,'parameters.tab',sep='/')
-testResultsFileName=paste(statDir,'testsResults.tab',sep='/')
-
-# LOADING LIBRARIES
-library(ggthemes)
-library(ggplot2)
-library(gridExtra)
-library(cowplot)
-library(gplots)
-library(tidyr)
-source(args$evolPack)
-source(args$vennPack)
+testResultsFileName=paste(statDir,'testsResults_',sep='/')
 
 #IMPORT DATAFRAME
-data=read.table(file = results,header = T,sep = "\t",na.strings = "NA",dec = "." )
+data=read.table(file = parametersFileName,header = T,sep = "\t",na.strings = "NA",dec = "." )
 data=unique(data)
 data$fmodel=factor(data$model,levels = c('b_free','M0','bsA','bsA1','M1'))
 
 #put in parameters adjustments #TODO
-allTEST=evol_tests(data,adj=F,alpha=as.numeric(args$pval))
-bANDbs=subset(allTEST,(Branch==T)&(BranchSites==T))
-b=subset(allTEST,(Branch==T))
-bs=subset(allTEST,(BranchSites==T))
-bsONLY=subset(allTEST,(Branch==F)&(BranchSites==T))
-bONLY=subset(allTEST,(Branch==T)&(BranchSites==F))
-venn=venn2(names = c('Branch','Branch-sites'),col=c('blue',"orangered"),weigths = c(dim(bONLY)[1],dim(bANDbs)[1],dim(bsONLY)[1]))
+listdf=evol_tests(data,alpha=as.numeric(args$pval))
+#### listdf 1:tests pval and padj   2: branch and branch-site results for pval     3: branch and branch-site results for padj
+i=1
+namefile=c('pval','padj')
+for (allTEST in listdf[2:3]){
+  bANDbs=subset(allTEST,(Branch==T)&(BranchSites==T))
+  b=subset(allTEST,(Branch==T))
+  bs=subset(allTEST,(BranchSites==T))
+  bsONLY=subset(allTEST,(Branch==F)&(BranchSites==T))
+  bONLY=subset(allTEST,(Branch==T)&(BranchSites==F))
+  venn=venn2(names = c('Branch','Branch-sites'),col=c('blue',"orangered"),weigths = c(dim(bONLY)[1],dim(bANDbs)[1],dim(bsONLY)[1]))
+  ggsave(paste('venn_',namefile[i],'.pdf',sep=''),venn,width = 8.27, height = 5.83, units = "in")
+  write.table(allTEST,file=paste(testResultsFileName,namefile[i],'.tab',sep=''),quote=F,row.names=F,sep="\t")
+  i=i+1
+}
+write.table(listdf[[1]],file=paste(testResultsFileName,'raw','.tab',sep=''),quote=F,row.names=F,sep="\t")
 
-ggsave('venn.pdf',venn,width = 8.27, height = 5.83, units = "in")
-write.table(allTEST,file=testResultsFileName,header=T,quote=F)
 
-if (args.graphSign==TRUE){
+if (args$graphSign==TRUE){
 	dir.create('branch_specific',recursive=T)
 	dir.create('branch-site_specific',recursive=T)
 	dir.create('aspecific',recursive=T)
@@ -93,4 +102,6 @@ if (args.graphSign==TRUE){
   		ggsave(file,graph, width = 11.69, height = 8.27, units = "in")
 	}
 }
+
+
 

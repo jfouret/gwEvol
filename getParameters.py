@@ -10,7 +10,6 @@ contact='julien.fouret12@uniagro.fr'
 ##parse argument
 parser = argparse.ArgumentParser(description='allow',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
-parser.add_argument('-result', metavar='results file', required=True, help="file to write all the results")
 
 args=parser.parse_args()
 
@@ -109,6 +108,8 @@ outDir=os.path.abspath(args.outDir)
 
 pamlDir=outDir+'/paml/'
 resDir=outDir+'/results/'
+
+mkdirp(resDir)
 
 resultFile=resDir+'parameters.tab'
 regExOutPath=re.compile('([^\/]+)\/([^\/]+)\/([^\.]+).*\/out')
