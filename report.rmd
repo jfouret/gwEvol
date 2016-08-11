@@ -1,0 +1,92 @@
+---
+title: "Positive selection analysis"
+author: "Julien Fouret"
+date: "09/08/2016"
+output: 
+  html_document:
+    toc: true # table of content true
+    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: united  # many options for theme, this one is my favorite.
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+addlink=function(df){
+  newdf=df
+  newdf$gene_name=paste('[',newdf$gene_name,']','(./',newdf$gene_name,'/summary.html)',sep='')
+  return(newdf)
+}
+library(knitr)
+```
+
+# Parameters for this study
+
+## Phylogenetic tree
+```{r}
+dataTree=as.matrix(read.csv('../logs/tree.metadata',header=F,sep=';'))
+colnames(dataTree)=c('Name','Value')
+kable(dataTree)
+```
+
+## Alignements & annotations
+```{r}
+dataAln=as.matrix(read.csv('../logs/alignments.metadata',header=F,sep=';'))
+colnames(dataAln)=c('Name','Value')
+kable(dataAln)
+```
+
+## Phylogenetic analysis
+TODO
+
+
+```{r}
+geneList=read.table('geneMethods.tab',sep='\t',header=T)
+geneTest=read.table('tests.tab',sep='\t',header=T)
+```
+
+# Genes under positive selection
+
+[Clic here](./venn.pdf) to see a venn diagram crossing branch and branch-sites results
+
+## Branch-site method
+
+```{r}
+bs=subset(geneList,BranchSites==T)$gene_name
+bsTests=subset(geneTest,gene_name %in% bs)
+kable(addlink(bsTests))
+```
+
+## Branch method
+
+```{r}
+b=subset(geneList,Branch==T)$gene_name
+bTests=subset(geneTest,gene_name %in% b)
+kable(addlink(bTests))
+```
+
+## Branch only
+
+```{r}
+bonly=subset(geneList,(Branch==T)&(BranchSites==F))$gene_name
+bonlyTests=subset(geneTest,gene_name %in% bonly)
+kable(addlink(bonlyTests))
+```
+
+## Branch-site only
+
+```{r}
+bsonly=subset(geneList,(Branch==F)&(BranchSites==T))$gene_name
+bsonlyTests=subset(geneTest,gene_name %in% bsonly)
+kable(addlink(bsonlyTests))
+```
+
+## Both methods
+
+```{r}
+bbs=subset(geneList,(Branch==T)&(BranchSites==T))$gene_name
+bbsTests=subset(geneTest,gene_name %in% bbs)
+kable(addlink(bbsTests))
+
+

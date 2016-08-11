@@ -1,0 +1,85 @@
+---
+title: 'Gene summary: positive selection'
+author: "Julien Fouret"
+date: "09/08/2016"
+output:
+  html_document:
+    toc: true # table of content true
+    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: united  # many options for theme, this one is my favorite.
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = F)
+library(knitr)
+library(printr)
+```
+
+# Alignments
+
+[Click here](./t0.algn.pdf) to visualize the alignment
+
+# Estimated parameters
+
+```{r}
+path=getwd()
+path=strsplit(path,'/')[[1]]
+geneName=path[length(path)]
+geneParam=subset(read.table('../parameters.tab',sep='\t',header=T),gene_name==geneName)
+kable(geneParam)
+```
+
+
+
+# KEGG annotations
+
+```{r}
+kegg=read.table('kegg.bed',sep=';',header = T)
+kegg$geneSymbol=NULL
+kable(kegg)
+makeTable<-function(df) { knitr::kable(df)}
+```
+
+
+```{r results = 'asis'}
+if (file.exists('BEB.tab')==TRUE){
+  cat('# Sites under positive selection')
+  BEB=read.table('BEB.tab',sep="\t")
+  names(BEB)=c('position','aa','pval')
+  BEB$aa=NULL
+  print(kable(BEB))
+  
+  cat("\n\n")
+  
+  cat('# Results by positions')
+  
+  for (pos in BEB$position){
+    cat(paste('## position:',pos,"\n",sep=' '))
+    
+    cat("### alignments \n")
+    cat("\n\n")
+    cat(paste('[Amino acid alignment](bs/t0.',pos,'.aa.pdf)',sep=''))
+    
+    cat("\n\n")
+    
+    cat(paste('[Codon alignment](bs/t0.',pos,'.nucl.pdf)',sep=''))
+    
+    cat("\n\n")
+    
+    cat("### Uniprot annotation \n\n")
+    
+    uniprot=read.table(paste('bs/',pos,'.uniprot.bed',sep=''),sep=';',header=T)
+    uniprot$geneSymbol=NULL
+    uniprot$OutOfRange=NULL
+    print(kable(uniprot,format='markdown'))
+  }
+}
+```
+
+
+
+
+
+
