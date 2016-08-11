@@ -32,17 +32,6 @@ kable(geneParam)
 ```
 
 
-
-# KEGG annotations
-
-```{r}
-kegg=read.table('kegg.bed',sep=';',header = T)
-kegg$geneSymbol=NULL
-kable(kegg)
-makeTable<-function(df) { knitr::kable(df)}
-```
-
-
 ```{r results = 'asis'}
 if (file.exists('BEB.tab')==TRUE){
   cat('# Sites under positive selection')
