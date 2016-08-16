@@ -82,22 +82,18 @@ if args.subset!='None':
 
 #Creer un dico pour les alnFile
 os.chdir(alnRepo)
-rName='/([a-zA-Z0-9_.@ :]*)-[^/]*.$'
+rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.[fa-fna-fasta]+$'
 alnFileDict=dict()
 for file in os.listdir(alnRepo):
-	if file.endswith(".fa") or file.endswith(".fasta") or file.endswith(".fna"):
-        	fileAbs=os.path.abspath(file)
-		m=re.search(rName,fileAbs)
-		if m:
-			key=m.group(1)
-			if subset:
-				if key in subsetList:
-					alnFileDict[key]=fileAbs
-			else:
+        fileAbs=os.path.abspath(file)
+	m=re.search(rName,fileAbs)
+	if m:
+		key=m.group(1)
+		if subset:
+			if key in subsetList:
 				alnFileDict[key]=fileAbs
 		else:
-			errorFile.write("WARNING: "+fileAbs+" do not allow retrieval of gene Name '"+rName+"'\n")
-
+			alnFileDict[key]=fileAbs
 #subset
 #def runAnalysis(keys,method,byModel=True):
 #	alnFile=alnFileDict[keys]
