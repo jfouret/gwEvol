@@ -114,6 +114,7 @@ def submitAnalysis(batchDict,batchName):
 	pbsFilePath=pbsDir+'/'+batchName+'.pbs'
 	pbsErr=args.pbsServer+':'+pbsLogDir+'/'+batchName+'.pbsErr'
 	pbsOut=args.pbsServer+':'+pbsLogDir+'/'+batchName+'.pbsOut'
+	pre_qsub="sed -i 's/@/\\@/g' "+pbsFilePath
 	qsub='qsub '+pbsFilePath+' -d "$PWD" -q '+args.queue+' -N '+batchName+' -l nodes=1:ppn=1 -o '+pbsOut+' -e '+pbsErr
 	start='echo "Job started on $HOSTNAME at time : $(date)"'
 	end='echo "Job finished on $HOSTNAME at time : $(date)"'
@@ -127,7 +128,7 @@ def submitAnalysis(batchDict,batchName):
 		cmd.append('cd '+pamlDir)
 	with open (pbsFilePath, "w") as pbsFile:
 		pbsFile.write(start+"\n"+"\n".join(cmd)+"\n"+end+"\n")
-	child=subprocess.Popen(qsub,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+	child=subprocess.Popen(pre_qsub+';'+qsub,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 	output,error=child.communicate()
 	if error!='':
 		errorFile.write('WARNING: when submitting '+batchName+':'+"\n"+error)
