@@ -82,7 +82,7 @@ if args.subset!='None':
 
 #Creer un dico pour les alnFile
 os.chdir(alnRepo)
-rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.[fa-fna-fasta]+$'
+rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.fa$'
 alnFileDict=dict()
 for file in os.listdir(alnRepo):
         fileAbs=os.path.abspath(file)
@@ -120,19 +120,20 @@ def submitAnalysis(batchDict,batchName):
 	cmd=list()
 	for keys in batchDict:
 		mkdirp(keys)
-                cmd.append('cd '+keys)
+		cmd.append('mkdir -p '+keys)
+		cmd.append('cd '+keys)
 		for model in modelList:
 			cmd.append('ete3 evol --noimg -t '+treeFile+' --alg '+batchDict[keys]+' -o '+prefix+' --mark '+mark+' --models '+model+' --cpu 1 1> '+prefix+'.out 2> '+prefix+'.err'+"\n\n")
-		cmd.append('cd ..')
+		cmd.append('cd '+pamlDir)
 	with open (pbsFilePath, "w") as pbsFile:
 		pbsFile.write(start+"\n"+"\n".join(cmd)+"\n"+end+"\n")
 	child=subprocess.Popen(qsub,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        output,error=child.communicate()
+	output,error=child.communicate()
 	if error!='':
-                errorFile.write('WARNING: when submitting '+batchName+':'+"\n"+error)
-                return(error)
-        else:
-                return(output)
+		errorFile.write('WARNING: when submitting '+batchName+':'+"\n"+error)
+		return(error)
+	else:
+		return(output)
 
 #se mettre dans le dossier output
 os.chdir(pamlDir)
@@ -196,4 +197,5 @@ with open ('batchJobs.txt','w') as logFile:
 		logFile.write(keys+"\t"+batchJobs[keys])
 with open ('target.txt','w') as logFile:
 	logFile.write("Target species: "+args.mark)
+
 
