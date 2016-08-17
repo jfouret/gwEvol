@@ -12,9 +12,13 @@ output:
 ---
 
 ```{r setup, include=F}
-knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(echo = F,message = FALSE, warning = FALSE,results=FALSE)
 library(knitr)
 library(printr)
+addlink=function(vector,prefix){
+  new=paste('[',vector,']','(',prefix,vector,')',sep='')
+  return(new)
+}
 ```
 
 # Alignments
@@ -28,14 +32,14 @@ path=getwd()
 path=strsplit(path,'/')[[1]]
 geneName=path[length(path)]
 geneParam=subset(read.table('../parameters.tab',sep='\t',header=T),gene_name==geneName)
-kable(geneParam)
+geneParam$gene_name=NULL
+kable(geneParam,row.names = F)
 ```
 
-
 ```{r results = 'asis'}
-if (file.exists('BEB.tab')==TRUE){
+if (file.exists('bs/BEB.tab')==TRUE){
   cat('# Sites under positive selection')
-  BEB=read.table('BEB.tab',sep="\t")
+  BEB=read.table('bs/BEB.tab',sep="\t")
   names(BEB)=c('position','aa','pval')
   BEB$aa=NULL
   print(kable(BEB))
@@ -43,6 +47,8 @@ if (file.exists('BEB.tab')==TRUE){
   cat("\n\n")
   
   cat('# Results by positions')
+  
+  cat("\n\n")
   
   for (pos in BEB$position){
     cat(paste('## position:',pos,"\n",sep=' '))
@@ -67,8 +73,160 @@ if (file.exists('BEB.tab')==TRUE){
 }
 ```
 
+#KEGG
+
+```{r}
+kegg=read.table('kegg.bed',header=TRUE,sep=";")
+
+```
+
+```{r results = 'asis'}
+if (dim(kegg)[1]==0){
+  cat('There is no kegg pathway associated')
+}
+```
+```{r}
+if (dim(kegg)[1]!=0){
+  kegg$mapID=addlink(kegg$mapID,'http://www.genome.jp/dbget-bin/www_bget?')
+  kable(kegg)
+}
+```
+
+#GO
+
+```{r}
+go=read.table('go.bed',header=TRUE,sep="\t")
+
+```
+
+```{r results = 'asis'}
+if (dim(go)[1]==0){
+  cat('There is no gene ontology associated')
+}
+```
+```{r}
+if (dim(go)[1]!=0){
+  go$goId=addlink(go$goId,'http://amigo.geneontology.org/amigo/term/')
+  kable(go)
+}
+```
+
+#Bibliography
+
+```{r}
+init=0
+for (file in list.files(pattern = 'biblio.tab')){
+  if (init==0){
+    init=1
+    biblio=read.table(file,header=T,sep="\t")
+    alias=biblio$alias
+  }else{
+    biblio=rbind(biblio,read.table(file,header=T,sep="\t"))
+  }
+}
+biblio$alias=NULL
+kable(biblio)
+```
+
+```{r}
+
+getBiblio=function(item,level){
+  df=read.delim(paste(item,'_',level,'_article.tab',sep=''),header=T,sep="\t")
+  return(df)
+}
+
+```
+
+##Virology
+
+### Results by genes
+```{r}
+item='virology'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+
+kable(gene,escape = T)
+#gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+```
+
+### Results by alias
+
+```{r}
+alias=getBiblio(item,'alias')
+alias=subset(alias,!(pmid %in% refpmid))
+
+if (dim(alias)[1]==0){
+  cat('There is no new publication with alias')
+}
+```
+```{r results="asis"}
+if (dim(alias)[1]!=0){
+  alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  kable(alias,escape = T)
+}
+
+```
 
 
+##Immunity
 
+### Results by genes
+```{r}
+item='immunity'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
 
+kable(gene,escape = T)
+#gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+```
 
+### Results by alias
+
+```{r}
+alias=getBiblio(item,'alias')
+alias=subset(alias,!(pmid %in% refpmid))
+
+if (dim(alias)[1]==0){
+  cat('There is no new publication with alias')
+}
+```
+```{r results="asis"}
+if (dim(alias)[1]!=0){
+  alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  kable(alias,escape = T)
+}
+
+```
+
+##Metabolism
+
+### Results by genes
+```{r}
+item='metabolism'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+
+kable(gene,escape = T)
+#gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+```
+
+### Results by alias
+
+```{r}
+alias=getBiblio(item,'alias')
+alias=subset(alias,!(pmid %in% refpmid))
+
+if (dim(alias)[1]==0){
+  cat('There is no new publication with alias')
+}
+```
+```{r results="asis"}
+if (dim(alias)[1]!=0){
+  alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  kable(alias,escape = T)
+}
+
+```
