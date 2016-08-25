@@ -6,6 +6,7 @@ version=1.0
 year=2016
 author='Julien Fouret'
 contact='julien.fouret12@uniagro.fr'
+scriptName='positiveSelection.py'
 
 parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -26,42 +27,25 @@ parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file w
 
 args=parser.parse_args()
 
-import shutil
 import re
 import os
 import subprocess
+import sys
+sys.path.append('/export/home/jfouret/lib/')
+from myfunctions import *
 
-def mkdirp(path):
-	if not os.path.exists(path):
-		os.makedirs(path)
+rootedDir=rootDir(args.outDir,True,{'paml':str,'parameters':str,'stats':str,'reports':str})
+rootedDir.logs.writeArgs()
 
-outDir=os.path.abspath(args.outDir)
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
-treeMeta=list()
-treeMeta.append('No metadatas')
-if os.path.exists(args.tree+'.metadata'):
-	with open (args.tree+'.metadata', "r") as metadataFile:
-		treeMeta=metadataFile.readlines()
 alnRepo=os.path.abspath(args.alnRepo)
-alnRepoMeta=list()
-alnRepoMeta.append('No metadatas')
-if os.path.exists(args.alnRepo+'.metadata'):
-	with open (args.alnRepo+'.metadata', "r") as metadataFile:
-		alnRepoMeta=metadataFile.readlines()
 
-pbsDir=outDir+'/pbs'
-logDir=outDir+'/logs'
-pbsLogDir=outDir+'/pbsLogs'
-pamlDir=outDir+'/paml'
+#TODO add log entry and metadata if there is
 
-mkdirp(outDir)
-mkdirp(pamlDir)
-mkdirp(pbsDir)
-mkdirp(logDir)
-mkdirp(pbsLogDir)
+rootedDir.logs.addMeta('Tree',treeFile.rstrip('/')+'.metadata')
+rootedDir.logs.addMeta('Alignments',alnRepo.rstrip('/')+'.metadata')
 
-errorFile=open(logDir+'/error','w')
 markList=args.mark.split(',')
 mark=',,'.join(markList)
 
@@ -94,69 +78,38 @@ for file in os.listdir(alnRepo):
 				alnFileDict[key]=fileAbs
 		else:
 			alnFileDict[key]=fileAbs
-#subset
-#def runAnalysis(keys,method,byModel=True):
-#	alnFile=alnFileDict[keys]
-#	if byModel:
-#		toSubmit='qsub '+args.pipelineRoot+'/methods/model.pbs -v prot="'+alnFile+'",mark="'+mark+'",tree="'+treeFile+'",prefix="'+prefix+'",model="'+method+'" -d "$PWD" -q '+args.queue+' -N '+keys+'_'+method
-#	else:
-#		toSubmit='qsub '+args.pipelineRoot+'/methods/'+method+'.pbs -v prot="'+alnFile+'",mark="'+mark+'",tree="'+treeFile+'",prefix="'+prefix+'" -d $PWD -q '+args.queue+' -N '+keys+'_'+method
-#
-#	child=subprocess.Popen(toSubmit,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-#	output,error=child.communicate()
-#	if error!='':
-#		errorFile.write('WARNING: when submitting '+alnFile+ ' with '+method+' method:'+"\n"+error)
-#		return(error)
-#	else:
-#		return(output)
+
+ete3=command('ete3 evol','ete3 version')
 
 def submitAnalysis(batchDict,batchName):
-	pbsFilePath=pbsDir+'/'+batchName+'.pbs'
-	pbsErr=args.pbsServer+':'+pbsLogDir+'/'+batchName+'.pbsErr'
-	pbsOut=args.pbsServer+':'+pbsLogDir+'/'+batchName+'.pbsOut'
-	pre_qsub="sed -i 's/@/\\@/g' "+pbsFilePath
-	qsub='qsub '+pbsFilePath+' -d "$PWD" -q '+args.queue+' -N '+batchName+' -l nodes=1:ppn=1 -o '+pbsOut+' -e '+pbsErr
-	start='echo "Job started on $HOSTNAME at time : $(date)"'
+	global rootedDir
+	pbsFilePath=rootedDir.pbs+'/'+batchName+'.pbs'
+	pbsErr=rootedDir.pbsLogs+'/'+batchName+'.e'
+	pbsOut=rootedDir.pbsLogs+'/'+batchName+'.o'
 	end='echo "Job finished on $HOSTNAME at time : $(date)"'
 	cmd=list()
 	for keys in batchDict:
-		mkdirp(keys)
-		cmd.append('mkdir -p '+keys)
-		cmd.append('cd '+keys)
+		mkdirp(rootedDir.paml+'/'+keys)
+		opt={
+			'--noimg':'',
+			'-t':treeFile,
+			'--alg':batchDict[keys],
+			'-o':prefix,
+			'--mark':mark,
+			'--cpu':'1'
+		}
+		pos=['1> '+prefix+'.out','2> '+prefix+'.err']
 		for model in modelList:
-			cmd.append('ete3 evol --noimg -t '+treeFile+' --alg '+batchDict[keys]+' -o '+prefix+' --mark '+mark+' --models '+model+' --cpu 1 1> '+prefix+'.out 2> '+prefix+'.err'+"\n\n")
-		cmd.append('cd '+pamlDir)
-	with open (pbsFilePath, "w") as pbsFile:
-		pbsFile.write(start+"\n"+"\n".join(cmd)+"\n"+end+"\n")
-	child=subprocess.Popen(pre_qsub+';'+qsub,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-	output,error=child.communicate()
-	if error!='':
-		errorFile.write('WARNING: when submitting '+batchName+':'+"\n"+error)
-		return(error)
-	else:
-		return(output)
+			opt['--models']=model
+			cmd.append(ete3.create(rootedDir.paml+'/'+keys,opt,pos).replace('@','\@'))
+	createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml)
 
-#se mettre dans le dossier output
-os.chdir(pamlDir)
+os.chdir(rootedDir.paml)
 
 if args.only_branch:
 	modelList=list(['b_free','bsA1','bsA'])
 else:
 	modelList=list(['M0','b_free','M1','bsA1','bsA'])
-
-#Launch jobs
-#bsJobs=dict()
-#bJobs=dict()
-#modelJobs=dict()
-#for model in modelList:
-	#for keys in alnFileDict:
-		#mkdirp(keys)
-		#os.chdir(keys)
-		#newKeys=keys+"\t"+model
-		#bsJobs[keys]=runAnalysis(alnFileDict[keys],'branch')
-		#bJobs[keys]=runAnalysis(alnFileDict[keys],'branch_site')
-		#modelJobs[newKeys]=runAnalysis(keys,model)
-		#os.chdir('..')
 
 batchJobs=dict()
 count=0
@@ -173,30 +126,5 @@ for keys in alnFileDict:
 		batchJobs[batchName]=submitAnalysis(batchDict,batchName)
 		batchDict=dict()
 
-#print report & metadatas
-os.chdir(logDir)
-with open ('tree.metadata', "w") as logFile:
-	logFile.write("path of the tree: "+treeFile+"\n")
-	logFile.write("".join(treeMeta))
-shutil.copy(treeFile,'tree')
-with open ('alignments.metadata', "w") as logFile:
-	logFile.write("path of the repository for alignments: "+alnRepo+"\n")
-	logFile.write("".join(alnRepoMeta))
-#with open ('branchJobs.txt', "w") as logFile:
-#	for keys in bJobs:
-#		logFile.write(keys+": "+bJobs[keys])
-#with open ('branchSiteJobs.txt', "w") as logFile:
-#        for keys in bsJobs:
-#                logFile.write(keys+": "+bsJobs[keys])
-#with open ('modelJobs.txt','w') as logFile:
-#	logFile.write("#GeneName\tModel\tJobId")
-#	for keys in modelJobs:
-#		logFile.write(keys+"\t"+modelJobs[keys])
-
-with open ('batchJobs.txt','w') as logFile:
-	for keys in batchJobs:
-		logFile.write(keys+"\t"+batchJobs[keys])
-with open ('target.txt','w') as logFile:
-	logFile.write("Target species: "+args.mark)
-
+saveRoot(rootedDir)
 
