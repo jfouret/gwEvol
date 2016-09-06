@@ -5,7 +5,8 @@ date: "09/08/2016"
 output:
   html_document:
     toc: true # table of content true
-    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    toc_float: true
+    depth: 4  # upto three depths of headings (specified by #, ## and ###)
     number_sections: true  ## if you want number sections at each table header
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
@@ -21,62 +22,55 @@ addlink=function(vector,prefix){
 }
 ```
 
+[click here to return](../report.html)
+
 # Alignments
 
-[Click here](./t0.algn.pdf) to visualize the alignment
+<div id="pdf">
+  <object width="800" height="250" type="application/pdf" data="./t0.algn.pdf?#zoom=85&scrollbar=0&toolbar=0&navpanes=0" id="pdf_content">
+    <p>Insert your error message here, if the PDF cannot be displayed.</p>
+  </object>
+</div>
 
-# Estimated parameters
+# Bibliography statistics
 
-```{r}
-path=getwd()
-path=strsplit(path,'/')[[1]]
-geneName=path[length(path)]
-geneParam=subset(read.table('../parameters.tab',sep='\t',header=T),gene_name==geneName)
-geneParam$gene_name=NULL
-kable(geneParam,row.names = F)
-```
-
-```{r results = 'asis'}
-if (file.exists('bs/BEB.tab')==TRUE){
-  cat('# Sites under positive selection')
-  BEB=read.table('bs/BEB.tab',sep="\t")
-  names(BEB)=c('position','aa','pval')
-  BEB$aa=NULL
-  print(kable(BEB))
-  
-  cat("\n\n")
-  
-  cat('# Results by positions')
-  
-  cat("\n\n")
-  
-  for (pos in BEB$position){
-    cat(paste('## position:',pos,"\n",sep=' '))
-    
-    cat("### alignments \n")
-    cat("\n\n")
-    cat(paste('[Amino acid alignment](bs/t0.',pos,'.aa.pdf)',sep=''))
-    
-    cat("\n\n")
-    
-    cat(paste('[Codon alignment](bs/t0.',pos,'.nucl.pdf)',sep=''))
-    
-    cat("\n\n")
-    
-    cat("### Uniprot annotation \n\n")
-    
-    uniprot=read.table(paste('bs/',pos,'.uniprot.bed',sep=''),sep=';',header=T)
-    uniprot$geneSymbol=NULL
-    uniprot$OutOfRange=NULL
-    print(kable(uniprot,format='markdown'))
+```{r results='asis'}
+init=0
+for (file in list.files(pattern = 'biblio.tab')){
+  if (init==0){
+    init=1
+    biblio=read.table(file,header=T,sep="\t",comment.char = '#')
+    alias=biblio$alias
+  }else{
+    biblio=rbind(biblio,read.table(file,header=T,sep="\t",comment.char = '#'))
   }
 }
+
+geneNum=biblio$byGene[1]
+aliasNum=biblio$byAlias[1]
+
+cat(paste('**Number of article(s) related to the gene name:** ',geneNum,sep=''))
+cat("\n\n")
+cat(paste('**Number of article(s) related to at least one alias:** ',aliasNum,sep=''))
+biblio$byGene=NULL
+biblio$byAlias=NULL
+biblio$alias=NULL
+print(kable(biblio,format = 'markdown'))
+```
+
+```{r}
+
+getBiblio=function(item,level){
+  df=read.delim(paste(item,'_',level,'_article.tab',sep=''),header=T,sep="\t")
+  return(df)
+}
+
 ```
 
 #KEGG
 
 ```{r}
-kegg=read.table('kegg.bed',header=TRUE,sep=";")
+kegg=read.table('kegg.bed',header=TRUE,sep="\t")
 
 ```
 
@@ -111,122 +105,229 @@ if (dim(go)[1]!=0){
 }
 ```
 
-#Bibliography
+# Estimated parameters
 
 ```{r}
-init=0
-for (file in list.files(pattern = 'biblio.tab')){
-  if (init==0){
-    init=1
-    biblio=read.table(file,header=T,sep="\t")
-    alias=biblio$alias
+path=getwd()
+path=strsplit(path,'/')[[1]]
+geneName=path[length(path)]
+geneParam=subset(read.table('../../results/parameters.tab',sep='\t',header=T),gene_name==geneName)
+geneParam$gene_name=NULL
+kable(geneParam,row.names = F)
+```
+
+```{r results = 'asis'}
+if (file.exists('bs/BEB.tab')==TRUE){
+  cat('# Sites under positive selection')
+  test=try(read.table('bs/BEB.tab',sep="\t"),silent=TRUE)
+  if (class(test)=="try-error"){
+    cat("\n\n")
+    cat(' **No sites with p(w>1)>0.5** ')
+    cat("\n\n")
   }else{
-    biblio=rbind(biblio,read.table(file,header=T,sep="\t"))
+    BEB=read.table('bs/BEB.tab',sep="\t")
+    names(BEB)=c('position','aa','probability')
+    BEB$aa=NULL
+    print(kable(BEB))
+  
+    cat("\n\n")
+    BEBhigh=subset(BEB,((substr(as.character(probability),0,3)=='0.9')|(substr(as.character(probability),0,1)=='1')))
+    BEBlow=subset(BEB,!((substr(as.character(probability),0,3)=='0.9')|(substr(as.character(probability),0,1)=='1')))
+    
+    cat('## BEB probability > 0.9')
+    if (dim(BEBhigh)[1]!=0){
+      cat("\n\n")
+  
+      for (pos in BEBhigh$position){
+        cat(paste('### position:',pos,"\n",sep=' '))
+      
+        cat("#### alignments \n")
+        cat("\n\n")
+  
+        alnpos=read.table(paste('bs/',pos,'.aln.tab',sep=''),header=T,sep="\t")
+      
+        print(kable(alnpos[order(alnpos$species),],format='markdown',row.names=F))
+  
+        cat("\n\n")
+      
+        cat("#### Uniprot annotation \n\n")
+      
+        uniprot=read.table(paste('bs/',pos,'.uniprot.bed',sep=''),sep="\t",header=T)
+        uniprot$geneSymbol=NULL
+        uniprot$OutOfRange=NULL
+        print(kable(uniprot,format='markdown'))
+      }
+    }else{
+      cat("\n\n")
+      cat("**No sites**")
+      cat("\n\n")
+    }
+    cat('## BEB probability < 0.9')
+    if (dim(BEBlow)[1]!=0){
+      cat("\n\n")
+  
+      for (pos in BEB$position){
+        cat(paste('### position:',pos,"\n",sep=' '))
+      
+        cat("#### alignments \n")
+        cat("\n\n")
+  
+        alnpos=read.table(paste('bs/',pos,'.aln.tab',sep=''),header=T,sep="\t")
+      
+        print(kable(alnpos[order(alnpos$species),],format='markdown',row.names=F))
+  
+        cat("\n\n")
+      
+        cat("#### Uniprot annotation \n\n")
+      
+        uniprot=read.table(paste('bs/',pos,'.uniprot.bed',sep=''),sep="\t",header=T)
+        uniprot$geneSymbol=NULL
+        uniprot$OutOfRange=NULL
+        print(kable(uniprot,format='markdown'))
+      }
+    }else{
+      cat("\n\n")
+      cat("**No sites**")
+      cat("\n\n")
+    }
+    
   }
 }
-biblio$alias=NULL
-kable(biblio)
 ```
 
-```{r}
+# Bibliography Details
 
-getBiblio=function(item,level){
-  df=read.delim(paste(item,'_',level,'_article.tab',sep=''),header=T,sep="\t")
-  return(df)
+##Nipah
+
+### Top 80 relevant articles for gene and terms search in pubMed
+```{r results='asis'}
+item='nipah'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+if (dim(gene)[1]!=0){
+  gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  print(kable(gene,escape = T,format='markdown'))
+}else{
+  cat('No article found')
 }
 
 ```
 
-##Virology
+### Additional top 80 articles found with aliases
 
-### Results by genes
-```{r}
-item='virology'
-gene=getBiblio(item,'gene')
-refpmid=gene$pmid
-gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-
-kable(gene,escape = T)
-#gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-```
-
-### Results by alias
-
-```{r}
+```{r results='asis'}
 alias=getBiblio(item,'alias')
 alias=subset(alias,!(pmid %in% refpmid))
 
 if (dim(alias)[1]==0){
-  cat('There is no new publication with alias')
+  cat('There is no new article with alias')
 }
 ```
 ```{r results="asis"}
 if (dim(alias)[1]!=0){
   alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-  kable(alias,escape = T)
+  print(kable(alias,escape = T,format='markdown'))
+}
+```
+
+## Immunology-Virology
+
+### Results by genes
+```{r results='asis'}
+item='immunoviro'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+if (dim(gene)[1]!=0){
+  gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  print(kable(gene,escape = T))
+}else{
+  cat('No article found')
 }
 
 ```
 
+### Additional top 80 articles found with aliases
 
-##Immunity
-
-### Results by genes
-```{r}
-item='immunity'
-gene=getBiblio(item,'gene')
-refpmid=gene$pmid
-gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-
-kable(gene,escape = T)
-#gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-```
-
-### Results by alias
-
-```{r}
+```{r results='asis'}
 alias=getBiblio(item,'alias')
 alias=subset(alias,!(pmid %in% refpmid))
 
 if (dim(alias)[1]==0){
-  cat('There is no new publication with alias')
+  cat('There is no new article with alias')
 }
 ```
 ```{r results="asis"}
 if (dim(alias)[1]!=0){
   alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-  kable(alias,escape = T)
+  print(kable(alias,escape = T))
+}
+```
+
+
+
+## Neurology and damages
+
+### Results by genes
+```{r results='asis'}
+item='neuro'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+if (dim(gene)[1]!=0){
+  gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  print(kable(gene,escape = T))
+}else{
+  cat('No article found')
 }
 
 ```
 
-##Metabolism
+### Additional top 80 articles found with aliases
 
-### Results by genes
-```{r}
-item='metabolism'
-gene=getBiblio(item,'gene')
-refpmid=gene$pmid
-gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-
-kable(gene,escape = T)
-#gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-```
-
-### Results by alias
-
-```{r}
+```{r results='asis'}
 alias=getBiblio(item,'alias')
 alias=subset(alias,!(pmid %in% refpmid))
 
 if (dim(alias)[1]==0){
-  cat('There is no new publication with alias')
+  cat('There is no new article with alias')
 }
 ```
 ```{r results="asis"}
 if (dim(alias)[1]!=0){
   alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
-  kable(alias,escape = T)
+  print(kable(alias,escape = T))
+}
+```
+
+## Metabolism-oxydation
+
+### Results by genes
+```{r results='asis'}
+item='metabo'
+gene=getBiblio(item,'gene')
+refpmid=gene$pmid
+if (dim(gene)[1]!=0){
+  gene$pmid=addlink(gene$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  print(kable(gene,escape = T))
+}else{
+  cat('No article found')
 }
 
 ```
+
+### Additional top 80 articles found with aliases
+
+```{r results='asis'}
+alias=getBiblio(item,'alias')
+alias=subset(alias,!(pmid %in% refpmid))
+
+if (dim(alias)[1]==0){
+  cat('There is no new article with alias')
+}
+```
+```{r results="asis"}
+if (dim(alias)[1]!=0){
+  alias$pmid=addlink(alias$pmid,'http://www.ncbi.nlm.nih.gov/pubmed/')
+  print(kable(alias,escape = T))
+}
+```
+[click here to return](../report.html)

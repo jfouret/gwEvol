@@ -6,7 +6,6 @@ version=1.0
 year=2016
 author='Julien Fouret'
 contact='julien.fouret12@uniagro.fr'
-scriptName='positiveSelection.py'
 
 parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -17,7 +16,6 @@ parser.add_argument('-alnRepo', metavar='/path', required=True, help="alignement
 parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
 parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
 parser.add_argument('-only_branch',default=False, action='store_true', help="perform only branch model (if you have already done others)")
-parser.add_argument('-pbsServer', metavar='domain',default='illumina-00-priv', required=False, help="domain name or IP of the pbs server")
 parser.add_argument('-pipelineRoot', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git', required=False, help="Root folder of the pipeline for positive selection analysis")
 parser.add_argument('-target', metavar='target',default='automatic', required=False, help="Names of target group")
 parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
@@ -34,21 +32,15 @@ import sys
 sys.path.append('/export/home/jfouret/lib/')
 from myfunctions import *
 
-rootedDir=rootDir(args.outDir,True,{'paml':str,'parameters':str,'stats':str,'reports':str})
-rootedDir.logs.writeArgs()
-
+rootedDir=RootDir(args.outDir,True,{'paml':str})
+rootedDir.logs.writeArgs(args)
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
 alnRepo=os.path.abspath(args.alnRepo)
-
-#TODO add log entry and metadata if there is
-
 rootedDir.logs.addMeta('Tree',treeFile.rstrip('/')+'.metadata')
 rootedDir.logs.addMeta('Alignments',alnRepo.rstrip('/')+'.metadata')
-
 markList=args.mark.split(',')
 mark=',,'.join(markList)
-
 if args.target=='automatic':
 	prefix='_'.join(markList)
 else:
@@ -63,7 +55,6 @@ if args.subset!='None':
 		geneToSubset=line.rstrip("\n")
 		subsetList.append(geneToSubset)
 	subsetFile.close()
-
 #Creer un dico pour les alnFile
 os.chdir(alnRepo)
 rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.fa$'
@@ -79,7 +70,7 @@ for file in os.listdir(alnRepo):
 		else:
 			alnFileDict[key]=fileAbs
 
-ete3=command('ete3 evol','ete3 version')
+ete3=Command('ete3 evol','ete3 version')
 
 def submitAnalysis(batchDict,batchName):
 	global rootedDir
@@ -102,8 +93,8 @@ def submitAnalysis(batchDict,batchName):
 		for model in modelList:
 			opt['--models']=model
 			cmd.append(ete3.create(rootedDir.paml+'/'+keys,opt,pos).replace('@','\@'))
+	#submitQsubWithPBS(createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml))
 	createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml)
-
 os.chdir(rootedDir.paml)
 
 if args.only_branch:
@@ -125,6 +116,5 @@ for keys in alnFileDict:
 		batchNumber+=1
 		batchJobs[batchName]=submitAnalysis(batchDict,batchName)
 		batchDict=dict()
-
 saveRoot(rootedDir)
 

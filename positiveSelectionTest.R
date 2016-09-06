@@ -46,9 +46,8 @@ suppressMessages(library(R.utils))
 
 #DEFINE PARAMETERS
 outDir=getAbsolutePath(args$outDir)
-statDir=paste(outDir,'stats',sep='/')
 resDir=paste(outDir,'results',sep='/')
-dir.create(statDir,recursive=T)
+statDir=resDir
 setwd(statDir)
 parametersFileName=paste(resDir,'parameters.tab',sep='/')
 testResultsFileName=paste(statDir,'testsResults_',sep='/')
@@ -102,6 +101,3 @@ if (args$graphSign==TRUE){
   		ggsave(file,graph, width = 11.69, height = 8.27, units = "in")
 	}
 }
-
-
-

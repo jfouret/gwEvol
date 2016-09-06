@@ -5,14 +5,16 @@ date: "09/08/2016"
 output: 
   html_document:
     toc: true # table of content true
+    toc_float: true
     depth: 3  # upto three depths of headings (specified by #, ## and ###)
     number_sections: true  ## if you want number sections at each table header
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
+bibliography: positiveSelection.bibtex
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(echo = F,warning = F,fig.width = 12, dpi=200)
 addlink=function(df){
   newdf=df
   newdf$gene_name=paste('[',newdf$gene_name,']','(./',newdf$gene_name,'/summary.html)',sep='')
@@ -21,41 +23,76 @@ addlink=function(df){
 library(knitr)
 ```
 
-# Parameters for this study
+# Phylogenetic analysis
 
-## Phylogenetic tree
+Results of positive selection analysis are presented below. 
+
+
+Alignment datas downloaded from UCSC (University of California Santa Cruz) ftp server, built with hg19 as reference. Each alignment refers to a gene linked to a known gene ID (kgID) by default. To make it more understandable kgID are turned into gene name. Databases propose some official reference ids/names but none of them show the capacity to translate all kgid. To answer this problem 4 reference databases were chosen, presented below in the order of priority and with the prefix associated to it. MySql fields used to recover these ids in a local version of UCSC database are in the table.
+
+Name	|prefix	|Description							|UCSC MySql field
+--------|-------|---------------------------------------------------------------|--------------------------
+HGNC	|	|HUGO(Human Genome Organisation) Gene Nomenclature Committee	|proteome.hgncXref.symbol
+kgName	|kg_	|default name given in UCSC database				|hg19.kgXref.geneSymbol
+UniProt	|sp_	|UniProt accession id, spID					|hg19.kgXref.spID
+RefSeq	|rs_	|NCBI Reference Sequence					|hg19.kgXref.refseq
+
+Despite the use of 4 different databases some kgID are still not associated with a name. They are going to be called NoName_# with # an iterative number.
+
+
+knowCanonical is a subset of UCSC known genes and identifies the canonical isoform of each cluster ID, or gene. Generally, this is the longest isoform. But two different knowGene can have the same the same IDs, this is due to the definition of clusters and to the redundancy of names across all databases.
+
+
+In order to avoid repeated names, the prefix dup#_ is added from the second apparition of a name, with # an iterative number.
+
+
+Each gene is then analysed by the pipeline according to the following steps:
+
+* Fitting evolutianory models with the gene alignment and the species tree: M0,M1,b_free,bsA1,bsA. Model details are in the table below
+
+Code	|Name			|short name (reference)	|Reference
+--------|-----------------------|-----------------------|---------------
+M0	|One-ratio		|Conservative selection	|[@Yang2000]
+M1a	|Nearly neutral  model	|Neutral Sites selection|[@Yang2005]
+b_free	|Branch free-ratio	|Branch positive	|[@Yang2002]
+bsA1	|Modified Model A	|Branch-site Neutral	|[@Zhang2005]
+bsA	|Model B		|Branch-site positive	|[@Zhang2005]
+
+Model optimisation were performed from alignements and tree mentioned above using PAML (Phylogenetic Analysis by Maximum Likelihood) driven by ete3. Then models were compared using the loglikelihood ratio test (LRT) using the chi2 distribution thus if the likelihood of the alternative model is sufficiently superior to the one of the null model the alternative model is supposed to significantly fit better the data than the null model. The table below summerized meanings of LRT tests. Two methods were used to detect positive selection: branch and branch-site methods. A gene is under branch positive selection if the LRT test b_free vs M0 is significant and is in model b_free the estimated dN/dS on foreground branch is superior to 1. A gene is under branch-site positive selection if both LRT test bsA vs M1a and bsA vs bsA1 are significants, in addition for every sites the probability of the dN/dS to be superior to 1 is calculated using Bayes Empirical Bayes method.
+
+Alternative hypothesis	|Null hypothesis	|Meaning if significant						|Reference
+------------------------|-----------------------|---------------------------------------------------------------|-----------------------
+b_free			|M0			|Different dN/dS ratio on foreground branch			|
+bsA			|M1a			|Different dN/dS ratio on foreground branch for some sites	|
+bsA			|bsA1			|dN/dS>1 on forground branch for some sites			|
+
+* Extracting parameters and likelihood from the best fit for each model
+* NOT FINISHED
+
 ```{r}
-dataTree=as.matrix(read.csv('../logs/tree.metadata',header=F,sep=';'))
-colnames(dataTree)=c('Name','Value')
-kable(dataTree)
-```
-
-## Alignements & annotations
-```{r}
-dataAln=as.matrix(read.csv('../logs/alignments.metadata',header=F,sep=';'))
-colnames(dataAln)=c('Name','Value')
-kable(dataAln)
-```
-
-## Phylogenetic analysis
-TODO
-
-
-```{r}
-geneList=read.table('geneMethods.tab',sep='\t',header=T)
-geneTest=read.table('tests.tab',sep='\t',header=T)
+geneList=read.table('geneMethods.tab',sep="\t",header=T)
+geneTest=read.table('tests.tab',sep="\t",header=T)
+geneTest$target=NULL
+geneTest <- reshape(geneTest, 
+  timevar = "tests",
+  idvar = c("gene_name"),
+  direction = "wide")
 ```
 
 # Genes under positive selection
 
-[Clic here](./venn.pdf) to see a venn diagram crossing branch and branch-sites results
+<div id="pdf">
+  <object width="700" height="500" type="application/pdf" data="./venn.pdf?#zoom=85&scrollbar=0&toolbar=0&navpanes=0" id="pdf_content">
+    <p>Insert your error message here, if the PDF cannot be displayed.</p>
+  </object>
+</div>
 
 ## Branch-site method
 
 ```{r}
 bs=subset(geneList,BranchSites==T)$gene_name
 bsTests=subset(geneTest,gene_name %in% bs)
-kable(addlink(bsTests))
+kable(addlink(bsTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
 ## Branch method
@@ -63,7 +100,8 @@ kable(addlink(bsTests))
 ```{r}
 b=subset(geneList,Branch==T)$gene_name
 bTests=subset(geneTest,gene_name %in% b)
-kable(addlink(bTests))
+kable(addlink(bTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
+
 ```
 
 ## Branch only
@@ -71,7 +109,7 @@ kable(addlink(bTests))
 ```{r}
 bonly=subset(geneList,(Branch==T)&(BranchSites==F))$gene_name
 bonlyTests=subset(geneTest,gene_name %in% bonly)
-kable(addlink(bonlyTests))
+kable(addlink(bonlyTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
 ## Branch-site only
@@ -79,7 +117,7 @@ kable(addlink(bonlyTests))
 ```{r}
 bsonly=subset(geneList,(Branch==F)&(BranchSites==T))$gene_name
 bsonlyTests=subset(geneTest,gene_name %in% bsonly)
-kable(addlink(bsonlyTests))
+kable(addlink(bsonlyTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
 ## Both methods
@@ -87,6 +125,158 @@ kable(addlink(bsonlyTests))
 ```{r}
 bbs=subset(geneList,(Branch==T)&(BranchSites==T))$gene_name
 bbsTests=subset(geneTest,gene_name %in% bbs)
-kable(addlink(bbsTests))
+kable(addlink(bbsTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
+```
+
+# Parameters focus by methods
+
+* Introduction
+To better understand why
+
+```{r}
+suppressMessages(library(ggplot2))
+suppressMessages(library(tidyr))
+suppressMessages(library(ggthemes))
+returnRatio=function(geneParam){
+  geneParam$fmodel=factor(geneParam$model,levels = c('b_free','M0','bsA','bsA1','M1'))
+  geneParam$p2=1-geneParam$p0-geneParam$p1
+  
+  wParams=gather(geneParam,wclass,w,w0:w2)
+  wParams$wclass=factor(wParams$wclass,levels=c('w0','w1','w2'))
+  wParams=subset(wParams,!is.na(w))
+  #wParams$wlim=wParams$w
+  #wParams$wlim[wParams$w>2]=2
+  wParams=wParams[,c('fmodel','wclass','w')]
+  bfree=subset(wParams,(wclass=='w1')&(fmodel=='b_free'))
+  bsa=subset(wParams,(wclass=='w2')&(fmodel=='bsA'))
+  ratio=bfree$w/bsa$w
+  return(c(mean(ratio),sd(ratio)))
+}
+
+resumeOmega=function(geneParam){
+  geneParam$fmodel=factor(geneParam$model,levels = c('b_free','M0','bsA','bsA1','M1'))
+  geneParam$p2=1-geneParam$p0-geneParam$p1
+  
+  wParams=gather(geneParam,wclass,w,w0:w2)
+  wParams$wclass=factor(wParams$wclass,levels=c('w0','w1','w2'))
+  wParams=subset(wParams,!is.na(w))
+  #wParams$wlim=wParams$w
+  #wParams$wlim[wParams$w>2]=2
+  wParams=wParams[,c('fmodel','wclass','w')]
+
+  wstat=aggregate(w~fmodel+wclass, data = wParams, FUN = mean)
+  wstat$sd=aggregate(w~fmodel+wclass, data = wParams, FUN = sd)$w
+  wstat$wsci=format(wstat$w,scientific = T,digits = 2)
+  wstat$wsci[wstat$wsci=="1.0e+00"]="1"
+  wstat$sdsci=format(wstat$sd,scientific = T,digits = 2)
+  wstat$Label=paste(wstat$wsci,"\n+/-",wstat$sdsci,sep='')
+  
+  
+  omega=ggplot(wstat,aes(x=wclass,y=w,fill=w,ymin=w-sd/2,ymax=w+sd/2)) + 
+    geom_bar(stat='identity') +
+    geom_errorbar()+
+    geom_text(stat='identity',aes(label=Label),vjust=-0.4,fontface='bold')+
+    theme_hc() + # a theme based on Highcharts JS.
+    scale_fill_gradient(low = "grey60", high = "black") +
+    guides(fill=FALSE) +
+    scale_x_discrete(labels=c('w0' = expression(omega[0]),
+                              'w1' = expression(omega[1]),
+                              'w2' = expression(omega[2])))+
+    labs(x='Categories',y='dN/dS ratio')+
+    facet_grid(.~fmodel,space = "free",scales = "free")+
+    theme(strip.text.y = element_text(size=14, angle=0))
+  return(omega)
+}
+
+resumeProportions=function(geneParam){
+  geneParam$fmodel=factor(geneParam$model,levels = c('b_free','M0','bsA','bsA1','M1'))
+  geneParam$p2=1-geneParam$p0-geneParam$p1
+  
+  pParams=gather(geneParam,pclass,p,c(p0,p1,p2))
+  pParams$pclass=factor(pParams$pclass,levels=c('p0','p1','p2'))
+  pParams=subset(pParams,!is.na(p))
+  #wParams$wlim=wParams$w
+  #wParams$wlim[wParams$w>2]=2
+  pParams=pParams[,c('fmodel','pclass','p')]
+
+  pstat=aggregate(p~fmodel+pclass, data = pParams, FUN = mean)
+  pstat$sd=aggregate(p~fmodel+pclass, data = pParams, FUN = sd)$p
+  pstat$psci=format(pstat$p,scientific = T,digits = 2)
+  pstat$psci[pstat$psci=="1.0e+00"]="1"
+  pstat$sdsci=format(pstat$sd,scientific = T,digits = 2)
+  pstat$Label=paste(pstat$psci,"\n+/-",pstat$sdsci,sep='')
+  
+  
+  prop=ggplot(pstat,aes(x=pclass,y=p,fill=p,ymin=p-sd/2,ymax=p+sd/2)) + 
+    geom_bar(stat='identity') +
+    geom_errorbar()+
+    geom_text(stat='identity',aes(label=Label),vjust=-0.4,fontface='bold')+
+    theme_hc() + # a theme based on Highcharts JS.
+    scale_fill_gradient(low = "grey60", high = "black") +
+    guides(fill=FALSE) +
+    #scale_x_discrete(labels=c('w0' = expression(omega[0]),
+    #                          'w1' = expression(omega[1]),
+    #                          'w2' = expression(omega[2])))+
+    labs(x='Categories',y='Site proportion')+
+    facet_grid(.~fmodel,space = "free",scales = "free")+
+    theme(strip.text.y = element_text(size=14, angle=0))
+  return(prop)
+}
+
+```
+
+## Branch specificity
+
+```{r}
+geneParam=subset(read.table('../results/parameters.tab',sep='\t',header=T),gene_name %in% bonly)
+resumeOmega(geneParam)
+ratio <- returnRatio(geneParam)
+Ratio_mean=c(ratio[1])
+Ratio_sd=c(ratio[2])
+resumeProportions(geneParam)
+
+```
+
+## Branch-site specificity
+
+```{r}
+geneParam=subset(read.table('../results/parameters.tab',sep='\t',header=T),gene_name %in% bsonly)
+resumeOmega(geneParam)
+ratio <- returnRatio(geneParam)
+Ratio_mean=c(Ratio_mean,ratio[1])
+Ratio_sd=c(Ratio_sd,ratio[2])
+resumeProportions(geneParam)
+```
+
+## No specificity
+
+```{r}
+geneParam=subset(read.table('../results/parameters.tab',sep='\t',header=T,dec='.'),gene_name %in% bbs)
+resumeOmega(geneParam)
+ratio <- returnRatio(geneParam)
+Ratio_mean=c(Ratio_mean,ratio[1])
+Ratio_sd=c(Ratio_sd,ratio[2])
+ratio=data.frame(type=c('branch','branch-site','both'),mean=Ratio_mean,sd=Ratio_sd)
+resumeProportions(geneParam)
+```
+
+## Analysis of the ratio between bfree w1 and bsA w2
+
+```{r}
+ggplot(ratio,aes(x=type,y=mean,fill=mean,ymin=mean-sd/2,ymax=mean+sd/2)) + 
+    geom_bar(stat='identity') +
+    coord_flip()+
+    geom_errorbar()+
+    geom_text(stat='identity',aes(label=mean),vjust=-0.4,fontface='bold')+
+    theme_hc() + # a theme based on Highcharts JS.
+    scale_fill_gradient(low = "grey60", high = "grey") +
+    guides(fill=FALSE) +
+    labs(x='Categories',y='dN/dS ratio')+
+    theme(strip.text.y = element_text(size=14, angle=0))
+```
+
+
+# References
+
 
 
