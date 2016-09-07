@@ -12,6 +12,7 @@ parser.add_argument('-general_biblio', metavar='/path',default='/export/work/bat
 parser.add_argument('-gene_rmd', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git/summary.rmd', required=False, help="path of gene rmd file")
 parser.add_argument('-adj', metavar='/path', default='yes',required=False, help="yes if adjusment, anything else for no adjustment")
 parser.add_argument('-genePythia', metavar='/path', default='/export/scripts/biblio/',required=False, help="script for bibliography")
+parser.add_argument('-checkAlign', metavar='/path', default='/export/work/batnipah/phylogeny/selection/git',required=False, help="path for check align script")
 args=parser.parse_args()
 ### import
 from Bio.Seq import Seq
@@ -93,6 +94,8 @@ def readBEB(geneName):
 genepythiaGit=Git(args.genePythia)
 genepythia=gitCommand(genepythiaGit,'genePythia.py')
 genepythia.log()
+checkAlignGit=Git(args.checkAlign)
+checkAlign=gitCommand(checkAlignGit,'checkAlign.py')
 reGeneName=re.compile('^(dup[0-9]+_)*([kg_]*[rs_]*[sp_]*)(.*)$')
 def byGeneStudy(geneName):
 	global args
@@ -107,6 +110,13 @@ def byGeneStudy(geneName):
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*uniprot.bed uniprot.bed')
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*name.bed name.bed')
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*fa algn.fa')
+	checkOpt={
+		'-repDir':workdir,
+		'-fore':'25',
+		'back':'50',
+		'-targets':rootedDir.logs.read('scripts')['positiveSelection.pymark'].value,
+	}
+	cmdList.append(checkAlign.create(workdir,checkOpt))
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*kegg.bed kegg.bed')
         cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*go.bed go.bed')
         cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*alias.bed alias.bed')
