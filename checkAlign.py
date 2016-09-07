@@ -41,7 +41,7 @@ for spec,seq in alnDict.iteritems():
 		length=len(seq)
 	if spec in foreList:
 		foreN+=seq.count('N')
-		backGap+=seq.count('-')
+		foreGap+=seq.count('-')
 		foreSpec+=1
 	else:
 		backN+=seq.count('N')
