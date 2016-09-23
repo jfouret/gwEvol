@@ -13,6 +13,7 @@ parser.add_argument('-gene_rmd', metavar='/path',default='/export/work/batnipah/
 parser.add_argument('-adj', metavar='/path', default='yes',required=False, help="yes if adjusment, anything else for no adjustment")
 parser.add_argument('-genePythia', metavar='/path', default='/export/scripts/biblio/',required=False, help="script for bibliography")
 parser.add_argument('-checkAlign', metavar='/path', default='/export/work/batnipah/phylogeny/selection/git',required=False, help="path for check align script")
+parser.add_argument('-aln', action='store_true', help="Put this to perform alignments")
 args=parser.parse_args()
 ### import
 from Bio.Seq import Seq
@@ -48,16 +49,18 @@ ete3.log()
 def viewAlgn(alnFileName,prefix,gene,tree=rootedDir.logs.read('scripts')['positiveSelection.pytree'].value,type='compactseq'):
 	global rootedDir
 	global ete3
-	workdir=rootedDir.reports+'/'+gene
-	options={
-		'-t':tree,
-		'--alg':alnFileName,
-		'--alg_format':'fasta',
-		'--alg_type':type,
-		'-i':prefix+'.pdf'
-	}
-	cmd=ete3.create(workdir,options)
-	submitOneShell(cmd)
+	global args
+	if args.aln:
+		workdir=rootedDir.reports+'/'+gene
+		options={
+			'-t':tree,
+			'--alg':alnFileName,
+			'--alg_format':'fasta',
+			'--alg_type':type,
+			'-i':prefix+'.pdf'
+		}
+		cmd=ete3.create(workdir,options)
+		submitOneShell(cmd)
 def Report(rmdFile,gene,biblio='None',jobID=None):
 	global rootedDir
 	workdir=rootedDir.reports+'/'+gene
@@ -67,7 +70,7 @@ def Report(rmdFile,gene,biblio='None',jobID=None):
 		cmdList.append('cp '+biblio+' .')
 	cmdList.append('rmd=$(ls *rmd);Rscript -e "rmarkdown::render(\'${rmd}\')"')
 	cmdList.append('rm *.rmd')
-	submitQsubWithPBS(createPBS(rootedDir.pbs+'/'+gene+'_rep.pbs',cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir,waitList=jobID))
+	submitQsubWithPBS(createPBS(cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir,waitList=jobID))
 def readBEB(geneName):
 	global rootedDir
 	child=subprocess.Popen('ls '+rootedDir.paml+'/'+geneName+'/*/bsA.*/out',shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
@@ -113,7 +116,7 @@ def byGeneStudy(geneName):
 	checkOpt={
 		'-repDir':workdir,
 		'-fore':'25',
-		'back':'50',
+		'-back':'50',
 		'-targets':rootedDir.logs.read('scripts')['positiveSelection.pymark'].value,
 	}
 	cmdList.append(checkAlign.create(workdir,checkOpt))
@@ -136,7 +139,7 @@ def byGeneStudy(geneName):
 		}
 		cmdListPBS.append(genepythia.create(workdir,options))
 	submitShell(cmdList)
-	jobID=submitQsubWithPBS(createPBS(rootedDir.pbs+'/'+geneName+'_rep.biblio',cmdListPBS,geneName+'_biblio',rootedDir.pbsLogs+'/'+geneName+'_biblio.e',rootedDir.pbsLogs+'/'+geneName+'_biblio.o',workdir=workdir))
+	jobID=submitQsubWithPBS(createPBS(cmdListPBS,geneName+'_biblio',rootedDir.pbsLogs+'/'+geneName+'_biblio.e',rootedDir.pbsLogs+'/'+geneName+'_biblio.o',workdir=workdir))
 	viewAlgn('algn.fa','algn',geneName)
 
 	if geneDict[geneName]=='bs':

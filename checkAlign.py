@@ -52,7 +52,7 @@ if ((backN+backGap)>(int(args.back)*length*backSpec/100)) or ((foreN+foreGap)>(i
 	validity='NO'
 with open(resultFileName,'w') as resultFile:
 	header=['fore_gap','fore_N','fore_spec','fore_max','back_gap','back_N','back_spec','back_max','length','validity']
-	line=[str(foreGap),str(foreN),str(foreSpec),args.fore,str(backGap),str(backN),str(backSpec),args.back,str(length),validity]
+	line=[str(foreGap),str(foreN),str(foreSpec),args.fore+'%',str(backGap),str(backN),str(backSpec),args.back+'%',str(length),validity]
 	resultFile.write("\t".join(header)+"\n"+"\t".join(line)+"\n")
 
 

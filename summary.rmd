@@ -32,6 +32,17 @@ addlink=function(vector,prefix){
   </object>
 </div>
 
+
+```{r}
+
+data_aln=read.table('algn_quality.tab',header=T)
+
+kable(data_aln)
+
+```
+
+
+
 # Bibliography statistics
 
 ```{r results='asis'}
