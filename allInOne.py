@@ -20,7 +20,7 @@ rootedDir=loadRoot(args.outDir)
 
 os.chdir(rootedDir.reports)
 
-reGene=re.compile('^(kg_|sp_|rs_)*(.*)$')
+reGene=re.compile('^(dup)*([0-9]*)(_)*(kg_|sp_|rs_)*(.*)$')
 geneFileName='geneMethods.tab'
 goSuffix='/go.bed'
 keggSuffix='/kegg.bed'
@@ -29,7 +29,7 @@ nameSuffix='/name.bed'
 outFileName='allInOne.tab'
 
 outFile=open(outFileName,'w')
-headList=['kgID','geneName','prefix','kegg','go','branch','branchsite','aln']
+headList=['kgID','geneName','prefix','duplicate','kegg','go','branch','branchsite','aln']
 outFile.write("\t".join(headList)+"\n")
 geneFile=open(geneFileName,'r')
 skipHead=True
@@ -40,11 +40,15 @@ for line in geneFile.readlines():
 		line=line.rstrip()
 		lineList=line.split("\t")
 		mGene=reGene.match(lineList[0])
-		geneName=mGene.group(2)
-		if mGene.group(1)==None:
+		geneName=mGene.group(5)
+		if mGene.group(4)==None:
 			prefix=''
 		else:
-			prefix=mGene.group(1)
+			prefix=mGene.group(4)
+		if mGene.group(1)==None:
+			duplicate='no'
+		else:
+			duplicate=mGene.group(2)
 		branch=lineList[2]
 		branchSite=lineList[3]
 		if branch=='FALSE' and  branchSite=='FALSE':
@@ -83,7 +87,7 @@ for line in geneFile.readlines():
 					goLineList=goLine.split("\t")
 					goIDList.append(goLineList[1])
 		goIDs=';'.join(goIDList)
-		writeList=[kgID,geneName,prefix,keggIDs,goIDs,branch,branchSite,aln]
+		writeList=[kgID,geneName,prefix,duplicate,keggIDs,goIDs,branch,branchSite,aln]
 		outFile.write("\t".join(writeList)+"\n")
 outFile.close()
 geneFile.close()
