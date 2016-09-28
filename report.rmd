@@ -6,7 +6,7 @@ output:
   html_document:
     toc: true # table of content true
     toc_float: true
-    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    depth: 4  # upto three depths of headings (specified by #, ## and ###)
     number_sections: true  ## if you want number sections at each table header
     theme: united  # many options for theme, this one is my favorite.
     highlight: tango  # specifies the syntax highlighting style
@@ -21,6 +21,8 @@ addlink=function(df){
   return(newdf)
 }
 library(knitr)
+library(xlsx)
+library(dplyr)
 ```
 
 # Phylogenetic analysis
@@ -79,7 +81,9 @@ geneTest <- reshape(geneTest,
   direction = "wide")
 ```
 
-# Genes under positive selection
+# pre-filtered analysis
+
+## Genes under positive selection
 
 <div id="pdf">
   <object width="700" height="500" type="application/pdf" data="./venn.pdf?#zoom=85&scrollbar=0&toolbar=0&navpanes=0" id="pdf_content">
@@ -87,7 +91,103 @@ geneTest <- reshape(geneTest,
   </object>
 </div>
 
-## Branch-site method
+## Enrichment analysis
+
+###GO enrichment
+
+```{r}
+N=dim(geneList)[1]
+peg=subset(geneList,(Branch==T)|(BranchSites==T))$gene_name
+go=read.delim(file='/export/work/batnipah/phylogeny/alignments/knownCanonical_Zhang2/reports/go.tab',sep="\t",header=T)
+go$pval=NA
+go$PSgenes=''
+go$Ngenes=NA
+go$NPSgenes=NA
+k=length(peg)
+for (i in 1:dim(go)[1]){
+  goGenes=unlist(strsplit(as.character(go[i,'genes']), split=","))
+  overlap=intersect(goGenes,peg)
+  x=length(overlap)
+  m=length(goGenes)
+  n=N-m
+  #1-phyper(q-1,m,n,k)   # one-sided fisher equivalent to hypergeometric
+  mat=matrix(c(x,k-x,m-x,N-x-(k-x)-(m-x)),nrow=2)
+  go[i,'pval']=fisher.test(mat,alternative = 'greater')$p.value
+  go[i,'PSgenes']=paste(overlap,collapse = ",")
+  go[i,'NPSgenes']=x
+  go[i,'Ngenes']=m
+}
+
+# basic filtering
+go=subset(go,NPSgenes>0)
+go$qval_BH=p.adjust(go$pval,method='BH')
+go$qval_bonferroni=p.adjust(go$pval,method='bonferroni')
+
+#kable(subset(go,pval<0.05))
+write.xlsx(go,file='go.xlsx')
+go$genes=NULL
+go$PSgenes=NULL
+go=arrange(go,pval)
+```
+#### Biological process
+
+```{r}
+kable(subset(go,(qval_BH<0.05)&(type=='biological_process')))
+```
+
+
+#### Molecular function
+```{r}
+kable(subset(go,(qval_BH<0.05)&(type=='molecular_function')))
+```
+
+#### Cellular component
+
+```{r}
+kable(subset(go,(qval_BH<0.05)&(type=='cellular_component')))
+```
+
+###KEGG enrichment
+
+```{r}
+N=dim(geneList)[1]
+peg=subset(geneList,(Branch==T)|(BranchSites==T))$gene_name
+kegg=read.delim(file='/export/work/batnipah/phylogeny/alignments/knownCanonical_Zhang2/reports/kegg.tab',sep="\t",header=T)
+kegg$pval=NA
+kegg$PSgenes=''
+kegg$Ngenes=NA
+kegg$NPSgenes=NA
+k=length(peg)
+for (i in 1:dim(kegg)[1]){
+  keggGenes=unlist(strsplit(as.character(kegg[i,'genes']), split=","))
+  overlap=intersect(keggGenes,peg)
+  x=length(overlap)
+  m=length(keggGenes)
+  n=N-m
+  #1-phyper(q-1,m,n,k)   # one-sided fisher equivalent to hypergeometric
+  mat=matrix(c(x,k-x,m-x,N-x-(k-x)-(m-x)),nrow=2)
+  kegg[i,'pval']=fisher.test(mat,alternative = 'greater')$p.value
+  kegg[i,'PSgenes']=paste(overlap,collapse = ",")
+  kegg[i,'NPSgenes']=x
+  kegg[i,'Ngenes']=m
+}
+
+# basic filtering
+kegg=subset(kegg,NPSgenes>0)
+kegg$qval_BH=p.adjust(kegg$pval,method='BH')
+kegg$qval_bonferroni=p.adjust(kegg$pval,method='bonferroni')
+
+write.xlsx(kegg,file='kegg.xlsx')
+kegg$genes=NULL
+kegg$PSgenes=NULL
+kegg=arrange(kegg,pval)
+kable(subset(kegg,pval<0.05))
+
+```
+
+## Gene Lists
+
+### Branch-site method
 
 ```{r}
 bs=subset(geneList,BranchSites==T)$gene_name
@@ -95,7 +195,7 @@ bsTests=subset(geneTest,gene_name %in% bs)
 kable(addlink(bsTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
-## Branch method
+### Branch method
 
 ```{r}
 b=subset(geneList,Branch==T)$gene_name
@@ -104,7 +204,7 @@ kable(addlink(bTests),row.names = F,format.args=list( scientific = TRUE, digits 
 
 ```
 
-## Branch only
+### Branch only
 
 ```{r}
 bonly=subset(geneList,(Branch==T)&(BranchSites==F))$gene_name
@@ -112,7 +212,7 @@ bonlyTests=subset(geneTest,gene_name %in% bonly)
 kable(addlink(bonlyTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
-## Branch-site only
+### Branch-site only
 
 ```{r}
 bsonly=subset(geneList,(Branch==F)&(BranchSites==T))$gene_name
@@ -120,7 +220,7 @@ bsonlyTests=subset(geneTest,gene_name %in% bsonly)
 kable(addlink(bsonlyTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
-## Both methods
+### Both methods
 
 ```{r}
 bbs=subset(geneList,(Branch==T)&(BranchSites==T))$gene_name
@@ -128,7 +228,7 @@ bbsTests=subset(geneTest,gene_name %in% bbs)
 kable(addlink(bbsTests),row.names = F,format.args=list( scientific = TRUE, digits = 2))
 ```
 
-# Parameters focus by methods
+## Parameters focus by methods
 
 * Introduction
 To better understand why
@@ -237,7 +337,7 @@ resumeProportions(geneParam)
 
 ```
 
-## Branch-site specificity
+### Branch-site specificity
 
 ```{r}
 geneParam=subset(read.table('../results/parameters.tab',sep='\t',header=T),gene_name %in% bsonly)
@@ -248,7 +348,7 @@ Ratio_sd=c(Ratio_sd,ratio[2])
 resumeProportions(geneParam)
 ```
 
-## No specificity
+### No specificity
 
 ```{r}
 geneParam=subset(read.table('../results/parameters.tab',sep='\t',header=T,dec='.'),gene_name %in% bbs)
@@ -260,7 +360,7 @@ ratio=data.frame(type=c('branch','branch-site','both'),mean=Ratio_mean,sd=Ratio_
 resumeProportions(geneParam)
 ```
 
-## Analysis of the ratio between bfree w1 and bsA w2
+### Analysis of the ratio between bfree w1 and bsA w2
 
 ```{r}
 ggplot(ratio,aes(x=type,y=mean,fill=mean,ymin=mean-sd/2,ymax=mean+sd/2)) + 
