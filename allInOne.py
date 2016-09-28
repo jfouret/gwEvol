@@ -7,6 +7,7 @@ contact='julien@fouret.me'
 ##parse argument
 parser = argparse.ArgumentParser(description='put all results in allInOne tableparser',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
+parser.add_argument('-checkAlign', metavar='/path', default='/export/work/batnipah/phylogeny/selection/git',required=False, help="path for check align script")
 args=parser.parse_args()
 
 import sys
@@ -22,17 +23,26 @@ os.chdir(rootedDir.reports)
 
 reGene=re.compile('^(dup)*([0-9]*)(_)*(kg_|sp_|rs_)*(.*)$')
 geneFileName='geneMethods.tab'
-goSuffix='/go.bed'
-keggSuffix='/kegg.bed'
-alnSuffix='/algn_quality.tab'
-nameSuffix='/name.bed'
+goSuffix='go.bed'
+keggSuffix='kegg.bed'
+alnSuffix='algn_quality.tab'
+nameSuffix='name.bed'
 outFileName='allInOne.tab'
-
 outFile=open(outFileName,'w')
 headList=['kgID','geneName','prefix','duplicate','kegg','go','branch','branchsite','aln']
 outFile.write("\t".join(headList)+"\n")
 geneFile=open(geneFileName,'r')
 skipHead=True
+
+#TODO DEPOSITORY
+# + ln kegg et go tab
+alnRepo=rootedDir.logs.read('scripts')['positiveSelection.pyalnRepo'].value
+submitOneShell('ln -s '+alnRepo+'/../reports/kegg.tab .')
+submitOneShell('ln -s '+alnRepo+'/../reports/go.tab .')
+
+checkAlignGit=Git(args.checkAlign)
+checkAlign=gitCommand(checkAlignGit,'checkAlign.py')
+
 for line in geneFile.readlines():
 	if skipHead:
 		skipHead=False	
@@ -51,21 +61,42 @@ for line in geneFile.readlines():
 			duplicate=mGene.group(2)
 		branch=lineList[2]
 		branchSite=lineList[3]
+		print(lineList[0])
 		if branch=='FALSE' and  branchSite=='FALSE':
-			continue
-		with open(lineList[0]+alnSuffix,'r') as alnFile:
+			sourceAlnNameFile=submitOneShell('ls '+alnRepo+'/'+lineList[0]+'-uc*.fa')['out'].rstrip()
+			alnFileName=alnSuffix
+			cmdList=['cd '+rootedDir.reports]
+			cmdList.append('ln -sf '+sourceAlnNameFile+' ./algn.fa')
+			checkOpt={
+				'-repDir':rootedDir.reports,
+				'-fore':'25',
+				'-back':'50',
+				'-targets':rootedDir.logs.read('scripts')['positiveSelection.pymark'].value,
+			}
+			cmdList.append(checkAlign.create(rootedDir.reports,checkOpt))
+			submitShell(cmdList)
+			nameFileName=submitOneShell('ls '+alnRepo+'/'+lineList[0]+'-uc*'+nameSuffix)['out'].rstrip()
+			keggFileName=submitOneShell('ls '+alnRepo+'/'+lineList[0]+'-uc*'+keggSuffix)['out'].rstrip()
+			goFileName=submitOneShell('ls '+alnRepo+'/'+lineList[0]+'-uc*'+goSuffix)['out'].rstrip()
+		else:
+			alnFileName=lineList[0]+'/'+alnSuffix
+			nameFileName=lineList[0]+'/'+nameSuffix
+			keggFileName=lineList[0]+'/'+keggSuffix
+			goFileName=lineList[0]+'/'+goSuffix
+
+		with open(alnFileName,'r') as alnFile:
 			alnFile.readline()
 			alnLine=alnFile.readline()
 			alnLine=alnLine.rstrip()
 			alnLineList=alnLine.split("\t")
 			aln=alnLineList[9]
-		with open(lineList[0]+nameSuffix,'r') as nameFile:
+		with open(nameFileName,'r') as nameFile:
 			nameFile.readline()
 			nameLine=nameFile.readline()
 			nameLine=nameLine.rstrip()
 			nameLineList=nameLine.split("\t")
 			kgID=nameLineList[1]
-		with open(lineList[0]+keggSuffix,'r') as keggFile:
+		with open(keggFileName,'r') as keggFile:
 			keggSkipHead=True
 			keggIDList=list()
 			for keggLine in keggFile.readlines():
@@ -76,7 +107,7 @@ for line in geneFile.readlines():
 					keggLineList=keggLine.split("\t")
 					keggIDList.append(keggLineList[1])
 		keggIDs=';'.join(keggIDList)
-		with open(lineList[0]+goSuffix,'r') as goFile:
+		with open(goFileName,'r') as goFile:
 			goSkipHead=True
 			goIDList=list()
 			for goLine in goFile.readlines():
