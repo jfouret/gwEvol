@@ -1,17 +1,10 @@
 #!/usr/bin/python
-
 import argparse
-
 version=1.0
 year=2016
 author='Julien Fouret'
 contact='julien.fouret12@uniagro.fr'
-
 parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-#parser.add_argument('-', metavar='', required=True, help="")
-#parser.add_argument('-', metavar='',default='', required=False, help="")
-
 parser.add_argument('-alnRepo', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
 parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
 parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
@@ -22,7 +15,6 @@ parser.add_argument('-batch', metavar='N',default='20', required=False, help="nu
 parser.add_argument('-queue', metavar='name',default='long7', required=False, help="Queue for qsub")
 parser.add_argument('-subset', metavar='/path',default='None', required=False, help="file with a list of gene name to consider (only)")
 parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file with newick format")
-
 args=parser.parse_args()
 
 import re
@@ -32,8 +24,11 @@ import sys
 sys.path.append('/export/home/jfouret/lib/')
 from myfunctions import *
 
+# Define root directory and logs
 rootedDir=RootDir(args.outDir,True,{'paml':str})
 rootedDir.logs.writeArgs(args)
+
+# Define variable and process arguments
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
 alnRepo=os.path.abspath(args.alnRepo)
@@ -41,11 +36,16 @@ rootedDir.logs.addMeta('Tree',treeFile.rstrip('/')+'.metadata')
 rootedDir.logs.addMeta('Alignments',alnRepo.rstrip('/')+'.metadata')
 markList=args.mark.split(',')
 mark=',,'.join(markList)
+if args.only_branch:
+	modelList=list(['b_free','bsA1','bsA'])
+else:
+	modelList=list(['M0','b_free','M1','bsA1','bsA'])
 if args.target=='automatic':
 	prefix='_'.join(markList)
 else:
 	prefix=args.target
-#list of gene for subsetting
+
+# list of gene for subsetting
 subset=False
 if args.subset!='None':
 	subset=True
@@ -55,12 +55,15 @@ if args.subset!='None':
 		geneToSubset=line.rstrip("\n")
 		subsetList.append(geneToSubset)
 	subsetFile.close()
-#Creer un dico pour les alnFile
+
+ete3=Command('ete3')
+
+# step 1 - create a dict for alnFile
 os.chdir(alnRepo)
 rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.fa$'
 alnFileDict=dict()
 for file in os.listdir(alnRepo):
-        fileAbs=os.path.abspath(file)
+	fileAbs=os.path.abspath(file)
 	m=re.search(rName,fileAbs)
 	if m:
 		key=m.group(1)
@@ -70,8 +73,7 @@ for file in os.listdir(alnRepo):
 		else:
 			alnFileDict[key]=fileAbs
 
-ete3=Command('ete3 evol','ete3 version')
-
+# step 2.0 define function for batch analyses
 def submitAnalysis(batchDict,batchName):
 	global rootedDir
 	pbsFilePath=rootedDir.pbs+'/'+batchName+'.pbs'
@@ -92,16 +94,12 @@ def submitAnalysis(batchDict,batchName):
 		pos=['1> '+prefix+'.out','2> '+prefix+'.err']
 		for model in modelList:
 			opt['--models']=model
-			cmd.append(ete3.create(rootedDir.paml+'/'+keys,opt,pos).replace('@','\@'))
+			cmd.append(ete3.create(rootedDir.paml+'/'+keys,opt,pos,subprogram='evol').replace('@','\@'))
 	#submitQsubWithPBS(createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml))
 	createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml)
+
+# step 2.1 start batch analyses
 os.chdir(rootedDir.paml)
-
-if args.only_branch:
-	modelList=list(['b_free','bsA1','bsA'])
-else:
-	modelList=list(['M0','b_free','M1','bsA1','bsA'])
-
 batchJobs=dict()
 count=0
 batchNumber=1
@@ -116,5 +114,7 @@ for keys in alnFileDict:
 		batchNumber+=1
 		batchJobs[batchName]=submitAnalysis(batchDict,batchName)
 		batchDict=dict()
-saveRoot(rootedDir)
 
+# save rootedDir and save logs then exit
+saveRoot(rootedDir)
+sys.exit()
