@@ -20,7 +20,6 @@ from myfunctions import *
 rootedDir=loadRoot(args.outDir)
 
 os.chdir(rootedDir.reports)
-
 reGene=re.compile('^(dup)*([0-9]*)(_)*(kg_|sp_|rs_)*(.*)$')
 geneFileName='geneMethods.tab'
 goSuffix='go.bed'
@@ -123,4 +122,6 @@ for line in geneFile.readlines():
 outFile.close()
 geneFile.close()
 
-
+# exit
+saveRoot(rootedDir)
+sys.exit()

@@ -13,6 +13,9 @@ parser.add_argument('-back', metavar='N', required=True, help="Maximum percentag
 parser.add_argument('-targets', metavar='spec1,spec2,...', required=True, help="Names of species part of the foreground")
 args=parser.parse_args()
 
+import sys
+
+# Initiation of counts
 foreGap=0
 foreN=0
 foreSpec=0
@@ -21,12 +24,13 @@ backN=0
 backSpec=0
 length=None
 foreList=args.targets.split(',')
-
 alnDict=dict()
 
+# variable definition
 alnFileName=args.repDir+'/algn.fa'
 resultFileName=args.repDir+'/algn_quality.tab'
 
+#read the aln files and parse it into a dictionary
 alnFile=open(alnFileName,'r')
 for line in alnFile.readlines():
 	line=line.rstrip()
@@ -36,6 +40,9 @@ for line in alnFile.readlines():
 	else:
 		alnDict[key]+=line
 alnFile.close()
+
+
+# iterate over the dictionary to count
 for spec,seq in alnDict.iteritems():
 	if length==None:
 		length=len(seq)
@@ -47,6 +54,8 @@ for spec,seq in alnDict.iteritems():
 		backN+=seq.count('N')
 		backGap+=seq.count('-')
 		backSpec+=1
+
+# finally reports the results
 validity='YES'
 if ((backN+backGap)>(int(args.back)*length*backSpec/100)) or ((foreN+foreGap)>(int(args.fore)*length*foreSpec/100)):
 	validity='NO'
@@ -55,8 +64,8 @@ with open(resultFileName,'w') as resultFile:
 	line=[str(foreGap),str(foreN),str(foreSpec),args.fore+'%',str(backGap),str(backN),str(backSpec),args.back+'%',str(length),validity]
 	resultFile.write("\t".join(header)+"\n"+"\t".join(line)+"\n")
 
+# exit properly
+sys.exit()
 
 
-
-
-
+#
