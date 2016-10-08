@@ -5,9 +5,7 @@ year='2016'
 version='1.2'
 
 startMessage=paste('Perform Log-likelihood ratio tests for positive selection analysis '," ; Version : ",version," ; ",year," ; Author : ",author," for more informations or enquiries please contact ",contact," (WARNING: pval and FC column names must begin respectively with 'p.val' and 'FC')",sep='')
-
 suppressMessages(library("argparse"))
-
 parser <- ArgumentParser(description=startMessage)
 parser$add_argument("-outDir",
                     type="character",
@@ -75,7 +73,7 @@ for (allTEST in listdf[2:3]){
 }
 write.table(listdf[[1]],file=paste(testResultsFileName,'raw','.tab',sep=''),quote=F,row.names=F,sep="\t")
 
-
+# graph all parameters if needed
 if (args$graphSign==TRUE){
 	dir.create('branch_specific',recursive=T)
 	dir.create('branch-site_specific',recursive=T)
