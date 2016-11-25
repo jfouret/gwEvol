@@ -1,21 +1,19 @@
 #!/usr/bin/python
 import argparse
-version=1.0
+gitRepository='SEDMATCHGITREPO'
+version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
 contact='julien@fouret.me'
 ##parse argument
 parser = argparse.ArgumentParser(description='put all results in allInOne tableparser',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
-parser.add_argument('-checkAlign', metavar='/path', default='/export/work/batnipah/phylogeny/selection/git',required=False, help="path for check align script")
 args=parser.parse_args()
 
 import sys
 import os
 import re
-sys.path.append('/export/home/jfouret/lib/')
-from myfunctions import *
-
+from jupype import *
 
 rootedDir=loadRoot(args.outDir)
 
@@ -39,7 +37,7 @@ alnRepo=rootedDir.logs.read('scripts')['positiveSelection.pyalnRepo'].value
 submitOneShell('ln -s '+alnRepo+'/../reports/kegg.tab .')
 submitOneShell('ln -s '+alnRepo+'/../reports/go.tab .')
 
-checkAlignGit=Git(args.checkAlign)
+checkAlignGit=Git(gitRepository+'/bin')
 checkAlign=gitCommand(checkAlignGit,'checkAlign.py')
 
 for line in geneFile.readlines():

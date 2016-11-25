@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import argparse
-version=1.2
+#add gitRepository
+gitRepository='SEDMATCHGITREPO'
+version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
 contact='julien@fouret.me'
@@ -16,8 +18,7 @@ import re
 import sys
 import glob
 import os
-sys.path.append('/export/home/jfouret/lib/')
-from myfunctions import *
+from jupype import *
 
 # Function definition to read models paml outputs
 def read_model(path,model,target,name):
@@ -114,8 +115,7 @@ for fileName in glob.glob('*/*/*/out'):
 resultFile.close()
 
 # command definition and launch statistical testing
-pipelineRoot=rootedDir.logs.read('scripts')['positiveSelection.pypipelineRoot'].value
-selectionGit=Git(pipelineRoot)
+selectionGit=Git(gitRepository+'/bin')
 testR=gitCommand(selectionGit,'positiveSelectionTest.R')
 testR.log()
 options={'-outDir':rootedDir.path}

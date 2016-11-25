@@ -1,8 +1,8 @@
 #!/usr/bin/Rscript
 author='Julien FOURET'
-contact='julien.fouret12@uniagro.fr'
+contact='julien.fouret@fouret.me'
 year='2016'
-version='1.2'
+version='SEDMATCHGITVERSION'
 
 startMessage=paste('Perform Log-likelihood ratio tests for positive selection analysis '," ; Version : ",version," ; ",year," ; Author : ",author," for more informations or enquiries please contact ",contact," (WARNING: pval and FC column names must begin respectively with 'p.val' and 'FC')",sep='')
 suppressMessages(library("argparse"))

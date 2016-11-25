@@ -1,12 +1,13 @@
 #!/usr/bin/python
 import argparse
-version=1.0
+#add gitRepository
+gitRepository='SEDMATCHGITREPO'
+version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
 contact='julien@fouret.me'
 ##parse argument
 parser = argparse.ArgumentParser(description='Perform statistics on alignments',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
-
 parser.add_argument('-repDir', metavar='/path', required=True, help="path of the report directory")
 parser.add_argument('-fore', metavar='N', required=True, help="Maximum percentage of gap in the foreground ")
 parser.add_argument('-back', metavar='N', required=True, help="Maximum percentage of gap in the background ")
@@ -14,6 +15,7 @@ parser.add_argument('-targets', metavar='spec1,spec2,...', required=True, help="
 args=parser.parse_args()
 
 import sys
+from jupype import *
 
 # Initiation of counts
 foreGap=0

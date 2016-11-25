@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import argparse
-version=1.0
+#add gitRepository
+gitRepository='SEDMATCHGITREPO'
+version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
 contact='julien@fouret.me'
@@ -14,8 +16,7 @@ args=parser.parse_args()
 import sys
 import os
 import re
-sys.path.append('/export/home/jfouret/lib/')
-from myfunctions import *
+from jupype import *
 
 #Load rootDir
 rootedDir=loadRoot(args.outDir)

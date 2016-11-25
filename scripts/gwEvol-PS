@@ -1,15 +1,17 @@
 #!/usr/bin/python
 import argparse
-version=1.0
+#add gitRepository
+gitRepository='SEDMATCHGITREPO'
+version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
 contact='julien.fouret12@uniagro.fr'
 parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-alnRepo', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
+parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
 parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
 parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
 parser.add_argument('-only_branch',default=False, action='store_true', help="perform only branch model (if you have already done others)")
-parser.add_argument('-pipelineRoot', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git', required=False, help="Root folder of the pipeline for positive selection analysis")
+parser.add_argument('-filter', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git', required=True, help="name of the filter used by gwAlign suite")
 parser.add_argument('-target', metavar='target',default='automatic', required=False, help="Names of target group")
 parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
 parser.add_argument('-queue', metavar='name',default='long7', required=False, help="Queue for qsub")
@@ -21,9 +23,8 @@ import re
 import os
 import subprocess
 import sys
-sys.path.append('/export/home/jfouret/lib/')
-from myfunctions import *
-
+from jupype import *
+#TODO ARGS.TARGET ==> ARGS.FILTER
 # Define root directory and logs
 rootedDir=RootDir(args.outDir,True,{'paml':str})
 rootedDir.logs.writeArgs(args)
@@ -40,10 +41,7 @@ if args.only_branch:
 	modelList=list(['b_free','bsA1','bsA'])
 else:
 	modelList=list(['M0','b_free','M1','bsA1','bsA'])
-if args.target=='automatic':
-	prefix='_'.join(markList)
-else:
-	prefix=args.target
+prefix=args.filter
 
 # list of gene for subsetting
 subset=False
@@ -61,6 +59,7 @@ ete3=Command('ete3')
 # step 1 - create a dict for alnFile
 os.chdir(alnRepo)
 rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.fa$'
+
 alnFileDict=dict()
 for file in os.listdir(alnRepo):
 	fileAbs=os.path.abspath(file)
@@ -73,47 +72,47 @@ for file in os.listdir(alnRepo):
 		else:
 			alnFileDict[key]=fileAbs
 
-# step 2.0 define function for batch analyses
-def submitAnalysis(batchDict,batchName):
-	global rootedDir
-	pbsFilePath=rootedDir.pbs+'/'+batchName+'.pbs'
-	pbsErr=rootedDir.pbsLogs+'/'+batchName+'.e'
-	pbsOut=rootedDir.pbsLogs+'/'+batchName+'.o'
-	end='echo "Job finished on $HOSTNAME at time : $(date)"'
-	cmd=list()
-	for keys in batchDict:
-		mkdirp(rootedDir.paml+'/'+keys)
-		opt={
-			'--noimg':'',
-			'-t':treeFile,
-			'--alg':batchDict[keys],
-			'-o':prefix,
-			'--mark':mark,
-			'--cpu':'1'
-		}
-		pos=['1> '+prefix+'.out','2> '+prefix+'.err']
-		for model in modelList:
-			opt['--models']=model
-			cmd.append(ete3.create(rootedDir.paml+'/'+keys,opt,pos,subprogram='evol').replace('@','\@'))
-	#submitQsubWithPBS(createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml))
-	createPBS(pbsFilePath,cmd,batchName,pbsErr,pbsOut,queue=args.queue,workdir=rootedDir.paml)
+filterPathDict=dict()
+with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
+	#Change for name in keys!
+	for line in kgPathDictFile.readlines():
+		key,value=line.rstrip().split("\t")
+		with open(value+'/anotation/consName.txt') as consNameFile:
+			newKey=consNameFile.readline().rstrip()
+		filterPathDict[newKey]=value+'/'+prefix
 
-# step 2.1 start batch analyses
-os.chdir(rootedDir.paml)
-batchJobs=dict()
-count=0
-batchNumber=1
-batchDict=dict()
-lastKey=alnFileDict.keys()[-1]
-for keys in alnFileDict:
-	count+=1
-	batchDict[keys]=alnFileDict[keys]
-	if count==batch or keys==lastKey:
-		batchName='Batch_'+str(batchNumber)
-		count=0
-		batchNumber+=1
-		batchJobs[batchName]=submitAnalysis(batchDict,batchName)
-		batchDict=dict()
+cmdList=list()
+iterBatch=1
+Nlim=int(args.batch)
+N=0
+init=True
+
+for symbol in filterPathDict.keys():
+	genePath=rootedDir.paml+'/'+symbol
+	alnPath=ilterPathDict[symbol]+'/codon_aln_blocks.fa'
+	mkdirp(genePath)
+	opt={
+		'--noimg':'',
+		'-t':treeFile,
+		'--alg':alnPath,
+		'-o':prefix,
+		'--mark':mark,
+		'--cpu':'1'
+	}
+	pos=['1> '+prefix+'.out','2> '+prefix+'.err']
+	for model in modelList:
+		opt['--models']=model
+		cmdList.append(ete3.create(genePath,opt,pos,subprogram='evol'))
+	N+=1
+	if N==Nlim:
+		batchName='gwEvol_paml_'+str(iterBatch)
+		submitQsubWithPBS(createPBS(cmdList,batchName,queue=args.queue,workdir=rootedDir.paml))
+		N=0
+		iterBatch+=1
+		cmdList=list()
+if N!=0:
+	batchName='gwEvol_paml_'+str(iterBatch)
+	submitQsubWithPBS(createPBS(cmdList,batchName,queue=args.queue,workdir=rootedDir.paml))
 
 # save rootedDir and save logs then exit
 saveRoot(rootedDir)
