@@ -59,7 +59,7 @@ N=0
 
 for symbol in filterPathDict.keys():
 	genePath=rootedDir.paml+'/'+symbol
-	alnPath=ilterPathDict[symbol]+'/codon_aln_blocks.fa'
+	alnPath=filterPathDict[symbol]+'/codon_aln_blocks.fa'
 	### check min Size
 	if os.path.exists(alnPath):
 		with open(alnPath,'r') as alnFile:
