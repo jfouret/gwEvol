@@ -1,29 +1,51 @@
-SHELL=sh
+### CAN BE CHANGED
+# install path
+INSTALLPATH=/export/bin
+# Default queue name for PBS
+QUEUE=batch
+
+### DO NOT CHANGE
+SHELL=bash
 GITREPO=$(shell pwd)
 GITREPOSED=$(shell pwd | sed 's/\//\\\//g')
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
-INSTALLPATH=/usr/local/bin/
-all:
-	mkdir -p bin
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/positiveSelection.py 		| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/gwEvol-PS
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/positiveSelectionReport.py 	| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/gwEvol-PS-report
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/allInOne.py 					| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/allInOne.py
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/getResults.py 				| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/getResults.py
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/positiveSelectionTest.R 		| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/positiveSelectionTest.R
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/geneGroupFilter.py 			| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/geneGroupFilter.py
-	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" scripts/checkAlign.py 				| sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" > bin/checkAlign.py
-	chmod 755 -R bin
-install :
+
+progs = gwEvol-paml gwEvol-report allInOne.py getResults.py positiveSelectionTest.R geneGroupFilter.py checkAlign.py
+bins=$(addprefixbin/,$(progs))
+
+### makefile core
+all : $(bins)
+
+$(bins) : bin 
+	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" $(subst bin/,scripts/,$@) | \
+	sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" | \
+	sed -e "s/SEDMATCHQUEUE/${QUEUE}/g"  > $@
+	chmod 755 $@
+
+bin :
+	mkdir bin
+	chmod 755 bin
+
+.PHONY : install
+install : $(bins)
 	ln -s ${GITREPO}/bin/gwEvol-PS ${INSTALLPATH}
 	ln -s ${GITREPO}/bin/gwEvol-PS-report ${INSTALLPATH}
-force_install :
+
+.PHONY : force_install
+force_install : $(bins)
 	ln -sf ${GITREPO}/bin/gwEvol-PS ${INSTALLPATH}
 	ln -sf ${GITREPO}/bin/gwEvol-PS-report ${INSTALLPATH}
-uninstall :
+
+.PHONY : uninstall
+uninstall : 
 	rm ${INSTALLPATH}/gwEvol-PS
 	rm ${INSTALLPATH}/gwEvol-PS-report
-doc :
+
+.PHONY : doc
+doc : 
 	Rscript -e "rmarkdown::render('README.md')"
+
+.PHONY : clean
 clean :
 	-rm -R bin
 	-rm README.html

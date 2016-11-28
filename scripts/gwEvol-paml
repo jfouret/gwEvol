@@ -9,14 +9,13 @@ contact='julien.fouret12@uniagro.fr'
 parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
 parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
-parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
-parser.add_argument('-only_branch',default=False, action='store_true', help="perform only branch model (if you have already done others)")
-parser.add_argument('-filter', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git', required=True, help="name of the filter used by gwAlign suite")
-parser.add_argument('-target', metavar='target',default='automatic', required=False, help="Names of target group")
-parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
-parser.add_argument('-queue', metavar='name',default='long7', required=False, help="Queue for qsub")
-parser.add_argument('-subset', metavar='/path',default='None', required=False, help="file with a list of gene name to consider (only)")
 parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file with newick format")
+parser.add_argument('-filter', metavar='name', required=True, help="name of the filter used by gwAlign suite")
+parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
+
+parser.add_argument('-queue', metavar='name',default='SEDMATCHQUEUE', required=False, help="Queue for qsub")
+parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="list of model to be computed")
+parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
 args=parser.parse_args()
 
 import re
@@ -37,40 +36,12 @@ rootedDir.logs.addMeta('Tree',treeFile.rstrip('/')+'.metadata')
 rootedDir.logs.addMeta('Alignments',alnRepo.rstrip('/')+'.metadata')
 markList=args.mark.split(',')
 mark=',,'.join(markList)
-if args.only_branch:
-	modelList=list(['b_free','bsA1','bsA'])
-else:
-	modelList=list(['M0','b_free','M1','bsA1','bsA'])
+
+modelList=args.models.split(',')
 prefix=args.filter
 
-# list of gene for subsetting
-subset=False
-if args.subset!='None':
-	subset=True
-	subsetList=list()
-	subsetFile=open(args.subset,'r')
-	for line in subsetFile.readlines():
-		geneToSubset=line.rstrip("\n")
-		subsetList.append(geneToSubset)
-	subsetFile.close()
-
 ete3=Command('ete3')
-
-# step 1 - create a dict for alnFile
-os.chdir(alnRepo)
-rName='/([a-zA-Z0-9_.@ :\-]*)-(uc[^/]*)\.fa$'
-
-alnFileDict=dict()
-for file in os.listdir(alnRepo):
-	fileAbs=os.path.abspath(file)
-	m=re.search(rName,fileAbs)
-	if m:
-		key=m.group(1)
-		if subset:
-			if key in subsetList:
-				alnFileDict[key]=fileAbs
-		else:
-			alnFileDict[key]=fileAbs
+ete3.log()
 
 filterPathDict=dict()
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
@@ -85,11 +56,21 @@ cmdList=list()
 iterBatch=1
 Nlim=int(args.batch)
 N=0
-init=True
 
 for symbol in filterPathDict.keys():
 	genePath=rootedDir.paml+'/'+symbol
 	alnPath=ilterPathDict[symbol]+'/codon_aln_blocks.fa'
+	### check min Size
+	if os.path.exists(alnPath):
+		with open(alnPath,'r') as alnFile:
+			line=alnFile.read()
+			line=alnFile.read().rstrip()
+			if len(line)<args.minSize:
+				sys.stderr.write('Filtering codon_aln_blocks.fa too short '+symbol+' see path: '+filterPathDict[symbol])
+				continue
+	else:
+		sys.stderr.write('Warning no codon_aln_blocks.fa for '+symbol+' see path: '+filterPathDict[symbol])
+		continue
 	mkdirp(genePath)
 	opt={
 		'--noimg':'',
