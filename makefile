@@ -3,6 +3,8 @@
 INSTALLPATH=/export/bin
 # Default queue name for PBS
 QUEUE=batch
+#default path for ete3 software
+ETE3=/export/source/archive/anaconda_ete/bin/
 
 ### DO NOT CHANGE
 SHELL=bash
@@ -13,12 +15,16 @@ GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 progs = gwEvol-paml gwEvol-report allInOne.py getResults.py positiveSelectionTest.R geneGroupFilter.py checkAlign.py
 bins=$(addprefix bin/,$(progs))
 
+prog_install = gwEvol-paml gwEvol-report
+installs=$(addprefix ${INSTALLPATH}/,$(prog_install))
+
 ### makefile core
 all : $(bins)
 
 $(bins) : bin 
 	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" $(subst bin/,scripts/,$@) | \
 	sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" | \
+	sed -e "s/SEDMATCHETE3/${ETE3}/g" | \
 	sed -e "s/SEDMATCHQUEUE/${QUEUE}/g"  > $@
 	chmod 755 $@
 
@@ -27,19 +33,13 @@ bin :
 	chmod 755 bin
 
 .PHONY : install
-install : $(bins)
-	ln -s ${GITREPO}/bin/gwEvol-PS ${INSTALLPATH}
-	ln -s ${GITREPO}/bin/gwEvol-PS-report ${INSTALLPATH}
-
-.PHONY : force_install
-force_install : $(bins)
-	ln -sf ${GITREPO}/bin/gwEvol-PS ${INSTALLPATH}
-	ln -sf ${GITREPO}/bin/gwEvol-PS-report ${INSTALLPATH}
+install : $(installs)
+$(installs) : $(bins)
+	ln -sf $(subst ${INSTALLPATH}/, ${GITREPO}/bin/, $@) ${INSTALLPATH}
 
 .PHONY : uninstall
 uninstall : 
-	rm ${INSTALLPATH}/gwEvol-PS
-	rm ${INSTALLPATH}/gwEvol-PS-report
+	rm $(installs)
 
 .PHONY : doc
 doc : 

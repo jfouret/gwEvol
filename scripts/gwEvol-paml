@@ -12,10 +12,10 @@ parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="bra
 parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file with newick format")
 parser.add_argument('-filter', metavar='name', required=True, help="name of the filter used by gwAlign suite")
 parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
-
 parser.add_argument('-queue', metavar='name',default='SEDMATCHQUEUE', required=False, help="Queue for qsub")
 parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="list of model to be computed")
 parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
+parser.add_argument('-ete3', metavar='/path',default='SEDMATCHETE3', required=False, help="Path of ete3 software")
 args=parser.parse_args()
 
 import re
@@ -31,16 +31,13 @@ rootedDir.logs.writeArgs(args)
 # Define variable and process arguments
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
-alnRepo=os.path.abspath(args.alnRepo)
-rootedDir.logs.addMeta('Tree',treeFile.rstrip('/')+'.metadata')
-rootedDir.logs.addMeta('Alignments',alnRepo.rstrip('/')+'.metadata')
 markList=args.mark.split(',')
 mark=',,'.join(markList)
 
 modelList=args.models.split(',')
 prefix=args.filter
 
-ete3=Command('ete3')
+ete3=Command('ete3',path=args.ete3)
 ete3.log()
 
 filterPathDict=dict()
