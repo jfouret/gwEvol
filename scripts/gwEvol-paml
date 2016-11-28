@@ -15,7 +15,9 @@ parser.add_argument('-outDir', metavar='/path', required=True, help="Output dire
 parser.add_argument('-queue', metavar='name',default='SEDMATCHQUEUE', required=False, help="Queue for qsub")
 parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="list of model to be computed")
 parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
+parser.add_argument('-minSize', metavar='N',default='12', required=False, help="number of base minimun for using an alignment")
 parser.add_argument('-ete3', metavar='/path',default='SEDMATCHETE3', required=False, help="Path of ete3 software")
+
 args=parser.parse_args()
 
 import re
@@ -31,9 +33,10 @@ rootedDir.logs.writeArgs(args)
 # Define variable and process arguments
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
+alnRepo=os.path.abspath(args.aln_dir)
 markList=args.mark.split(',')
 mark=',,'.join(markList)
-
+minSize=int(args.minSize)
 modelList=args.models.split(',')
 prefix=args.filter
 
@@ -45,7 +48,7 @@ with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
 	#Change for name in keys!
 	for line in kgPathDictFile.readlines():
 		key,value=line.rstrip().split("\t")
-		with open(value+'/anotation/consName.txt') as consNameFile:
+		with open(value+'/annotation/consName.txt') as consNameFile:
 			newKey=consNameFile.readline().rstrip()
 		filterPathDict[newKey]=value+'/'+prefix
 
@@ -62,7 +65,7 @@ for symbol in filterPathDict.keys():
 		with open(alnPath,'r') as alnFile:
 			line=alnFile.read()
 			line=alnFile.read().rstrip()
-			if len(line)<args.minSize:
+			if len(line)<minSize:
 				sys.stderr.write('Filtering codon_aln_blocks.fa too short '+symbol+' see path: '+filterPathDict[symbol])
 				continue
 	else:

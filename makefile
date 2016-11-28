@@ -8,8 +8,11 @@ ETE3=/export/source/archive/anaconda_ete/bin/
 
 ### DO NOT CHANGE
 SHELL=bash
+
 GITREPO=$(shell pwd)
 GITREPOSED=$(shell pwd | sed 's/\//\\\//g')
+GITETE3=$(shell echo $ETE3 | sed 's/\//\\\//g')
+
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
 progs = gwEvol-paml gwEvol-report allInOne.py getResults.py positiveSelectionTest.R geneGroupFilter.py checkAlign.py
@@ -24,7 +27,7 @@ all : $(bins)
 $(bins) : bin 
 	sed -e "s/SEDMATCHGITREPO/${GITREPOSED}/g" $(subst bin/,scripts/,$@) | \
 	sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" | \
-	sed -e "s/SEDMATCHETE3/${ETE3}/g" | \
+	sed -e "s/SEDMATCHETE3/${GITETE3}/g" | \
 	sed -e "s/SEDMATCHQUEUE/${QUEUE}/g"  > $@
 	chmod 755 $@
 
