@@ -65,7 +65,7 @@ for symbol in filterPathDict.keys():
 		with open(alnPath,'r') as alnFile:
 			line=alnFile.read()
 			line=alnFile.read().rstrip()
-			if len(line)<minSize:
+			if len(line)<=minSize:
 				sys.stderr.write('Filtering codon_aln_blocks.fa too short '+symbol+' see path: '+filterPathDict[symbol])
 				continue
 	else:
