@@ -11,7 +11,7 @@ GITREPOSED=$(shell pwd | sed 's/\//\\\//g')
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
 progs = gwEvol-paml gwEvol-report allInOne.py getResults.py positiveSelectionTest.R geneGroupFilter.py checkAlign.py
-bins=$(addprefixbin/,$(progs))
+bins=$(addprefix bin/,$(progs))
 
 ### makefile core
 all : $(bins)
