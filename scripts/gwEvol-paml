@@ -17,7 +17,7 @@ parser.add_argument('-models', metavar='model1,model2,...', required=False,defau
 parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
 parser.add_argument('-minSize', metavar='N',default='12', required=False, help="number of base minimun for using an alignment")
 parser.add_argument('-ete3', metavar='/path',default='SEDMATCHETE3', required=False, help="Path of ete3 software")
-
+parser.add_argument('-v',action='store_true', help="verbose")
 args=parser.parse_args()
 
 import re
@@ -59,28 +59,32 @@ N=0
 
 for symbol in filterPathDict.keys():
 	genePath=rootedDir.paml+'/'+symbol
-	alnPath=filterPathDict[symbol]+'/codon_aln_blocks.fa'
+	alnPath_raw=filterPathDict[symbol]+'/codon_aln_blocks.fa'
+	alnPath_paml=filterPathDict[symbol]+'/codon_aln_blocks_paml.fa'
 	### check min Size
-	if os.path.exists(alnPath):
-		with open(alnPath,'r') as alnFile:
-			line=alnFile.read()
-			line=alnFile.read().rstrip()
+	if os.path.exists(alnPath_raw):
+		with open(alnPath_raw,'r') as alnFile:
+			line=alnFile.readline()
+			line=alnFile.readline().rstrip()
 			if len(line)<=minSize:
-				sys.stderr.write('Filtering codon_aln_blocks.fa too short '+symbol+' see path: '+filterPathDict[symbol])
+				error='Filtering codon_aln_blocks.fa too short '+symbol+' see path: '+filterPathDict[symbol]+"\n"
+				writeErrOut('ERROR', 'error handling included in the script gwEvol-paml', filterPathDict[symbol]+'/codon_aln_blocks.fa screen', 'Gene: '+symbol, error)
 				continue
 	else:
-		sys.stderr.write('Warning no codon_aln_blocks.fa for '+symbol+' see path: '+filterPathDict[symbol])
+		error='Warning no codon_aln_blocks.fa for '+symbol+' see path: '+filterPathDict[symbol]+"\n"
+		writeErrOut('ERROR', 'error handling included in the script gwEvol-paml', filterPathDict[symbol]+'/codon_aln_blocks.fa screen', 'Gene: '+symbol, error)
 		continue
 	mkdirp(genePath)
 	opt={
 		'--noimg':'',
 		'-t':treeFile,
-		'--alg':alnPath,
+		'--alg':alnPath_paml,
 		'-o':prefix,
 		'--mark':mark,
 		'--cpu':'1'
 	}
 	pos=['1> '+prefix+'.out','2> '+prefix+'.err']
+	cmdList.append('sed -e \'s/!/-/g\' '+alnPath_raw+' > '+alnPath_paml)
 	for model in modelList:
 		opt['--models']=model
 		cmdList.append(ete3.create(genePath,opt,pos,subprogram='evol'))

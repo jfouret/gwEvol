@@ -11,7 +11,7 @@ SHELL=bash
 
 GITREPO=$(shell pwd)
 GITREPOSED=$(shell pwd | sed 's/\//\\\//g')
-GITETE3=$(shell echo $ETE3 | sed 's/\//\\\//g')
+GITETE3=$(shell echo ${ETE3} | sed 's/\//\\\//g')
 
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
