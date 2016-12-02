@@ -8,26 +8,31 @@ author='Julien Fouret'
 contact='julien@fouret.me'
 ##parse argument
 parser = argparse.ArgumentParser(description='Make reports for phylo',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
+parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
-parser.add_argument('-general_rmd', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git/report.rmd', required=False, help="path of general rmd file")
-parser.add_argument('-general_biblio', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git/positiveSelection.bibtex', required=False, help="path of general bibliography file")
-parser.add_argument('-gene_rmd', metavar='/path',default='/export/work/batnipah/phylogeny/selection/git/summary.rmd', required=False, help="path of gene rmd file")
+parser.add_argument('-general_rmd', metavar='/path',default=gitRepository+'/template/report.rmd', required=False, help="path of general rmd file")
+parser.add_argument('-general_biblio', metavar='/path',default=gitRepository+'/template/positiveSelection.bibtex', required=False, help="path of general bibliography file")
+parser.add_argument('-gene_rmd', metavar='/path',default=gitRepository+'/summary.rmd', required=False, help="path of gene rmd file")
 parser.add_argument('-adj', metavar='/path', default='yes',required=False, help="yes if adjusment, anything else for no adjustment")
 parser.add_argument('-genePythia', metavar='/path', default='/export/scripts/biblio/',required=False, help="script for bibliography")
 parser.add_argument('-checkAlign', metavar='/path', default='/export/work/batnipah/phylogeny/selection/git',required=False, help="path for check align script")
-parser.add_argument('-aln', action='store_true', help="Put this to perform alignments")
 args=parser.parse_args()
 ### import
 from Bio.Seq import Seq
 from Bio.Alphabet import generic_dna, generic_protein
 import os
 import sys
+import glob
 import subprocess
 import copy
 import re
 from jupype import *
+
+
 #variable in args
 rootedDir=loadRoot(args.outDir)
+alnRepo=os.path.abspath(args.aln_dir)
+
 ###Put in a separate function
 def getOpt(fileName,module,option):
 	head = None
@@ -45,23 +50,7 @@ def getOpt(fileName,module,option):
 				return(lineList[head['value']])
 				break
 ###
-ete3=Command('ete3 view','ete3 version')
-ete3.log()
-def viewAlgn(alnFileName,prefix,gene,tree=rootedDir.logs.read('scripts')['positiveSelection.pytree'].value,type='compactseq'):
-	global rootedDir
-	global ete3
-	global args
-	if args.aln:
-		workdir=rootedDir.reports+'/'+gene
-		options={
-			'-t':tree,
-			'--alg':alnFileName,
-			'--alg_format':'fasta',
-			'--alg_type':type,
-			'-i':prefix+'.pdf'
-		}
-		cmd=ete3.create(workdir,options)
-		submitOneShell(cmd)
+
 def Report(rmdFile,gene,biblio='None',jobID=None):
 	global rootedDir
 	workdir=rootedDir.reports+'/'+gene
@@ -72,12 +61,12 @@ def Report(rmdFile,gene,biblio='None',jobID=None):
 	cmdList.append('rmd=$(ls *rmd);Rscript -e "rmarkdown::render(\'${rmd}\')"')
 	cmdList.append('rm *.rmd')
 	submitQsubWithPBS(createPBS(cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir,waitList=jobID))
+
+
 def readBEB(geneName):
 	global rootedDir
-	child=subprocess.Popen('ls '+rootedDir.paml+'/'+geneName+'/*/bsA.*/out',shell=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
-	output,error=child.communicate()
-	fileName=output.rstrip()
-	file=open(fileName,'r')
+	fileName=glob.glob(rootedDir.paml+'/'+geneName+'/*/bsA.*/out')[0]
+	file=open(fileList[0],'r')
 	BEB=""
 	level=0
 	for line in file.readlines():
@@ -95,18 +84,19 @@ def readBEB(geneName):
 	file.close()
 	with open('BEB.tab','w') as file:
 		file.write(BEB)
+
 genepythiaGit=Git(args.genePythia)
 genepythia=gitCommand(genepythiaGit,'genePythia.py')
 genepythia.log()
-checkAlignGit=Git(args.checkAlign)
-checkAlign=gitCommand(checkAlignGit,'checkAlign.py')
 reGeneName=re.compile('^(dup[0-9]+_)*([kg_]*[rs_]*[sp_]*)(.*)$')
+
+
 def byGeneStudy(geneName):
 	global args
 	global rootedDir
 	global genepythia
 	global reGeneName
-	alnRepo=rootedDir.logs.read('scripts')['positiveSelection.pyalnRepo'].value
+	global alnRepo
 	os.chdir(rootedDir.reports)
 	workdir=rootedDir.reports+'/'+geneName
 	mkdirp(workdir)
@@ -114,13 +104,6 @@ def byGeneStudy(geneName):
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*uniprot.bed uniprot.bed')
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*name.bed name.bed')
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*fa algn.fa')
-	checkOpt={
-		'-repDir':workdir,
-		'-fore':'25',
-		'-back':'50',
-		'-targets':rootedDir.logs.read('scripts')['positiveSelection.pymark'].value,
-	}
-	cmdList.append(checkAlign.create(workdir,checkOpt))
 	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*kegg.bed kegg.bed')
         cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*go.bed go.bed')
         cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*alias.bed alias.bed')
@@ -190,8 +173,6 @@ def byGeneStudy(geneName):
 		os.chdir('..')
 	Report(args.gene_rmd,geneName,jobID=[jobID])
 	os.chdir('..')
-
-#ADD GETRESULTS
 
 cmdGeneral=['cd '+rootedDir.reports]
 cmdGeneral.append('cp '+rootedDir.results+'/parameters.tab .')

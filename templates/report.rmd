@@ -29,7 +29,6 @@ library(dplyr)
 
 Results of positive selection analysis are presented below. 
 
-
 Alignment datas downloaded from UCSC (University of California Santa Cruz) ftp server, built with hg19 as reference. Each alignment refers to a gene linked to a known gene ID (kgID) by default. To make it more understandable kgID are turned into gene name. Databases propose some official reference ids/names but none of them show the capacity to translate all kgid. To answer this problem 4 reference databases were chosen, presented below in the order of priority and with the prefix associated to it. MySql fields used to recover these ids in a local version of UCSC database are in the table.
 
 Name	|prefix	|Description							|UCSC MySql field
@@ -50,7 +49,7 @@ In order to avoid repeated names, the prefix dup#_ is added from the second appa
 
 Each gene is then analysed by the pipeline according to the following steps:
 
-* Fitting evolutianory models with the gene alignment and the species tree: M0,M1,b_free,bsA1,bsA. Model details are in the table below
+## Fitting evolutianory models with the gene alignment and the species tree: M0,M1,b_free,bsA1,bsA. Model details are in the table below
 
 Code	|Name			|short name (reference)	|Reference
 --------|-----------------------|-----------------------|---------------
@@ -60,7 +59,11 @@ b_free	|Branch free-ratio	|Branch positive	|[@Yang2002]
 bsA1	|Modified Model A	|Branch-site Neutral	|[@Zhang2005]
 bsA	|Model B		|Branch-site positive	|[@Zhang2005]
 
-Model optimisation were performed from alignements and tree mentioned above using PAML (Phylogenetic Analysis by Maximum Likelihood) driven by ete3. Then models were compared using the loglikelihood ratio test (LRT) using the chi2 distribution thus if the likelihood of the alternative model is sufficiently superior to the one of the null model the alternative model is supposed to significantly fit better the data than the null model. The table below summerized meanings of LRT tests. Two methods were used to detect positive selection: branch and branch-site methods. A gene is under branch positive selection if the LRT test b_free vs M0 is significant and is in model b_free the estimated dN/dS on foreground branch is superior to 1. A gene is under branch-site positive selection if both LRT test bsA vs M1a and bsA vs bsA1 are significants, in addition for every sites the probability of the dN/dS to be superior to 1 is calculated using Bayes Empirical Bayes method.
+Model optimisation were performed from alignements and tree mentioned above using PAML (Phylogenetic Analysis by Maximum Likelihood) driven by ete3. The branch selected for positive selection analysis is the one leading to the common ancestor of all foreground species.
+
+## Statistical tests for positive selection detection
+
+Then models were compared using the loglikelihood ratio test (LRT) using the chi2 distribution thus if the likelihood of the alternative model is sufficiently superior to the one of the null model the alternative model is supposed to significantly fit better the data than the null model. The table below summerized meanings of LRT tests. Two methods were used to detect positive selection: branch and branch-site methods. A gene is under branch positive selection if the LRT test b_free vs M0 is significant and is in model b_free the estimated dN/dS on foreground branch is superior to 1. A gene is under branch-site positive selection if both LRT test bsA vs M1a and bsA vs bsA1 are significants, in addition for every sites the probability of the dN/dS to be superior to 1 is calculated using Bayes Empirical Bayes method. All p-values were adjusted for multiple testing.
 
 Alternative hypothesis	|Null hypothesis	|Meaning if significant						|Reference
 ------------------------|-----------------------|---------------------------------------------------------------|-----------------------
@@ -68,8 +71,28 @@ b_free			|M0			|Different dN/dS ratio on foreground branch			|
 bsA			|M1a			|Different dN/dS ratio on foreground branch for some sites	|
 bsA			|bsA1			|dN/dS>1 on forground branch for some sites			|
 
-* Extracting parameters and likelihood from the best fit for each model
-* NOT FINISHED
+## Prioritization and data mining 
+
+The list of genes positive selection need to be filtered for furthur analyses. Indeed immunovirologic pecularities of all genes under positive selection in bats' immunovirology. There is no simple way or threshold to apply in order to select a restrited list of genes. However it is possible to class those genes (i) according to their relevance in litterature in the fields, (ii) according to the relevance of the functional annotation and (iii) according how the site subject to positive selection has been described in the litterature.
+
+### Bibliography
+
+With gene symbol and gene alias pubmed database is searched for publication related to a specific topic. A publication is searched to contains at least one term  
+
+topics			|terms		
+------------------------|---------------
+Nipah			|nipah,paramyxovirus,paramyxoviridae,hendra,hennipavirus
+Metabolism		|ROS,reactive oxygen species,oxydative stress, free radicals,reactive nitrogen species
+Immuno-virology		|innate immunity,inate immune,virus,viral,immune response
+Neurology		|brain damage,encephalitis,neuropathology,neurological disease,neurological disorder
+
+
+
+
+
+### Functional annotation
+
+### Importance of the site under positive selection
 
 ```{r}
 geneList=read.table('geneMethods.tab',sep="\t",header=T)

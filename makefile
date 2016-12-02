@@ -15,10 +15,10 @@ GITETE3=$(shell echo ${ETE3} | sed 's/\//\\\//g')
 
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
-progs = gwEvol-paml gwEvol-report allInOne.py getResults.py positiveSelectionTest.R geneGroupFilter.py checkAlign.py
+progs = gwEvol-paml gwEvol-report allInOne.py gwEvol-results positiveSelectionTest.R geneGroupFilter.py checkAlign.py
 bins=$(addprefix bin/,$(progs))
 
-prog_install = gwEvol-paml gwEvol-report
+prog_install = gwEvol-paml gwEvol-report gwEvol-results
 installs=$(addprefix ${INSTALLPATH}/,$(prog_install))
 
 ### makefile core

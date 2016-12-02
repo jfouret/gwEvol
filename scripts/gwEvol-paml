@@ -8,7 +8,7 @@ author='Julien Fouret'
 contact='julien.fouret12@uniagro.fr'
 parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
-parser.add_argument('-mark', metavar='spec1,...,specN', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
+parser.add_argument('-mark', metavar='ete3_mark', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
 parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file with newick format")
 parser.add_argument('-filter', metavar='name', required=True, help="name of the filter used by gwAlign suite")
 parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
@@ -34,8 +34,7 @@ rootedDir.logs.writeArgs(args)
 batch=int(args.batch)
 treeFile=os.path.abspath(args.tree)
 alnRepo=os.path.abspath(args.aln_dir)
-markList=args.mark.split(',')
-mark=',,'.join(markList)
+mark=args.mark
 minSize=int(args.minSize)
 modelList=args.models.split(',')
 prefix=args.filter

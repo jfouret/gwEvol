@@ -13,14 +13,14 @@ parser$add_argument("-outDir",
                     help="output directory for the whole analysis")
 parser$add_argument("-evolPack",
                     type="character",
-		    default='/export/scripts/phylogeny/evolPack.R',
+		    default='SEDEVOLPACK',
                     metavar="/path",
-                    help="Path of the evolPack package")
+                    help="EvolPack R package path")
 parser$add_argument("-vennPack",
                     type="character",
-                    default='/export/scripts/utils/venn.R',
+                    default='SEDVENNPACK',
   		    metavar="/path",
-                    help="Path of the vennPack package")
+                    help="Venn R package path")
 parser$add_argument("-pval",
                     type="character",
                     default='0.05',
@@ -59,7 +59,7 @@ data$fmodel=factor(data$model,levels = c('b_free','M0','bsA','bsA1','M1'))
 listdf=evol_tests(data,alpha=as.numeric(args$pval))
 #### listdf 1:tests pval and padj   2: branch and branch-site results for pval     3: branch and branch-site results for padj
 i=1
-namefile=c('pval','padj')
+typeAdj=c('pval','padj')
 for (allTEST in listdf[2:3]){
   bANDbs=subset(allTEST,(Branch==T)&(BranchSites==T))
   b=subset(allTEST,(Branch==T))
@@ -67,8 +67,8 @@ for (allTEST in listdf[2:3]){
   bsONLY=subset(allTEST,(Branch==F)&(BranchSites==T))
   bONLY=subset(allTEST,(Branch==T)&(BranchSites==F))
   venn=venn2(names = c('Branch','Branch-sites'),col=c('blue',"orangered"),weigths = c(dim(bONLY)[1],dim(bANDbs)[1],dim(bsONLY)[1]))
-  ggsave(paste('venn_',namefile[i],'.pdf',sep=''),venn,width = 8.27, height = 5.83, units = "in")
-  write.table(allTEST,file=paste(testResultsFileName,namefile[i],'.tab',sep=''),quote=F,row.names=F,sep="\t")
+  ggsave(paste('venn_',typeAdj[i],'.pdf',sep=''),venn,width = 8.27, height = 5.83, units = "in")
+  write.table(allTEST,file=paste(testResultsFileName,typeAdj[i],'.tab',sep=''),quote=F,row.names=F,sep="\t")
   i=i+1
 }
 write.table(listdf[[1]],file=paste(testResultsFileName,'raw','.tab',sep=''),quote=F,row.names=F,sep="\t")

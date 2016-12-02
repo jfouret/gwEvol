@@ -8,6 +8,7 @@ contact='julien@fouret.me'
 ##parse argument
 parser = argparse.ArgumentParser(description='put all results in allInOne tableparser',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
+parser.add_argument('-aln_dir', metavar='/path', required=True, help="Aln repository in with annotation")
 args=parser.parse_args()
 
 import sys
@@ -16,29 +17,27 @@ import re
 from jupype import *
 
 rootedDir=loadRoot(args.outDir)
-
 os.chdir(rootedDir.reports)
 reGene=re.compile('^(dup)*([0-9]*)(_)*(kg_|sp_|rs_)*(.*)$')
 geneFileName='geneMethods.tab'
-goSuffix='go.bed'
-keggSuffix='kegg.bed'
-alnSuffix='algn_quality.tab'
-nameSuffix='name.bed'
+
+goPath='go.tab'
+keggPath='kegg.tab'
+namePath='name.tab'
+
 outFileName='allInOne.tab'
 outFile=open(outFileName,'w')
 headList=['kgID','geneName','prefix','duplicate','kegg','go','branch','branchsite','aln']
 outFile.write("\t".join(headList)+"\n")
+
 geneFile=open(geneFileName,'r')
 skipHead=True
 
 #TODO DEPOSITORY
 # + ln kegg et go tab
-alnRepo=rootedDir.logs.read('scripts')['positiveSelection.pyalnRepo'].value
+alnRepo=os.path.abspath(args.aln_dir)
 submitOneShell('ln -s '+alnRepo+'/../reports/kegg.tab .')
 submitOneShell('ln -s '+alnRepo+'/../reports/go.tab .')
-
-checkAlignGit=Git(gitRepository+'/bin')
-checkAlign=gitCommand(checkAlignGit,'checkAlign.py')
 
 for line in geneFile.readlines():
 	if skipHead:
