@@ -8,14 +8,14 @@ author='Julien Fouret'
 contact='julien@fouret.me'
 ##parse argument
 parser = argparse.ArgumentParser(description='Make reports for phylo',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
+parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories")
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
+parser.add_argument('-filter', metavar='name', required=True, help="Name of the filter used in gwAlign")
 parser.add_argument('-general_rmd', metavar='/path',default=gitRepository+'/template/report.rmd', required=False, help="path of general rmd file")
 parser.add_argument('-general_biblio', metavar='/path',default=gitRepository+'/template/positiveSelection.bibtex', required=False, help="path of general bibliography file")
 parser.add_argument('-gene_rmd', metavar='/path',default=gitRepository+'/summary.rmd', required=False, help="path of gene rmd file")
 parser.add_argument('-adj', metavar='/path', default='yes',required=False, help="yes if adjusment, anything else for no adjustment")
-parser.add_argument('-genePythia', metavar='/path', default='/export/scripts/biblio/',required=False, help="script for bibliography")
-parser.add_argument('-checkAlign', metavar='/path', default='/export/work/batnipah/phylogeny/selection/git',required=False, help="path for check align script")
+parser.add_argument('-genePythia', metavar='/path', default='SEDMATCHGENEPYTHIA',required=False, help="script for bibliography")
 args=parser.parse_args()
 ### import
 from Bio.Seq import Seq
@@ -27,7 +27,6 @@ import subprocess
 import copy
 import re
 from jupype import *
-
 
 #variable in args
 rootedDir=loadRoot(args.outDir)
@@ -90,10 +89,17 @@ genepythia=gitCommand(genepythiaGit,'genePythia.py')
 genepythia.log()
 reGeneName=re.compile('^(dup[0-9]+_)*([kg_]*[rs_]*[sp_]*)(.*)$')
 
+#consNameDict=
+consNameDict=dict()
+with open(aln_dir+'/reports/consNameDict.tab','r') as consNameDictFile:
+	for line in consNameDictFile.readlines():
+		key,value=line.rstrip().split("\t")
+		consNameDict[key]=value
 
 def byGeneStudy(geneName):
 	global args
 	global rootedDir
+	global consNameDict
 	global genepythia
 	global reGeneName
 	global alnRepo
@@ -101,12 +107,14 @@ def byGeneStudy(geneName):
 	workdir=rootedDir.reports+'/'+geneName
 	mkdirp(workdir)
 	cmdList=['cd '+workdir]
-	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*uniprot.bed uniprot.bed')
-	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*name.bed name.bed')
-	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*fa algn.fa')
-	cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*kegg.bed kegg.bed')
-        cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*go.bed go.bed')
-        cmdList.append('cp '+alnRepo+'/'+geneName+'-uc*alias.bed alias.bed')
+	annotPath=consNameDict[geneName]+'annotation'
+	seqPath=consNameDict[geneName]+'/'+args.filter
+	cmdList.append('ln -sf '+annotPath+'/uniprot.tab uniprot.tab')
+	cmdList.append('ln -sf '+annotPath+'/name.tab name.tab')
+	cmdList.append('ln -sf '+seqPath+' algn')
+	cmdList.append('ln -sf '+annotPath+'/kegg.tab kegg.tab')
+	cmdList.append('ln -sf '+annotPath+'/go.tab go.tab')
+	cmdList.append('ln -sf '+annotPath+'/alias.tab alias.tab')
 	prefixTerm={
 		'nipah':'\'nipah,paramyxovirus,paramyxoviridae,hendra,hennipavirus\'',
 		'immunoviro':'\'innate immunity,innate immune,virus,viral,immune response\'',
@@ -117,22 +125,35 @@ def byGeneStudy(geneName):
 	for prefix,term in prefixTerm.iteritems():
 		options={
 			'-gene':reGeneName.match(geneName).group(3),
-			'-alias':'alias.bed',
+			'-alias':'alias.tab',
 			'-prefix':prefix,
 			'-term':term
 		}
 		cmdListPBS.append(genepythia.create(workdir,options))
 	submitShell(cmdList)
 	jobID=submitQsubWithPBS(createPBS(cmdListPBS,geneName+'_biblio',rootedDir.pbsLogs+'/'+geneName+'_biblio.e',rootedDir.pbsLogs+'/'+geneName+'_biblio.o',workdir=workdir))
-	viewAlgn('algn.fa','algn',geneName)
+	#viewAlgn('algn.fa','algn',geneName)  # voir GRAPH
 
+	# TODO posDict!!! key = block and value = ref if . give last in  no . for block
+	old_ref=1
+	posDict=dict()
+	with open('algn/posDict.tab') as posDictFile:
+		posDictFile.readline()
+		for line in posDictFile.readlines()
+			ref,aln,exon,block=line.rstrip().split("\t")
+			if block != '' and block != '.':
+				if ref=='.':
+					posDict[block]=old_ref
+				else:
+					posDict[block]=ref
+					old_ref=ref
 	if geneDict[geneName]=='bs':
 		mkdirp(workdir+'/bs')
 		os.chdir(workdir+'/bs')
 		readBEB(geneName)
 		bebfile=open('BEB.tab','r')
 		algn=dict()
-		fasta=open('../algn.fa','r')
+		fasta=open('algn/codon_aln_blocks.fa','r')
 		for line2 in fasta.readlines():
 			line2=line2.rstrip()
 			if line2[:1]=='>':
@@ -143,11 +164,13 @@ def byGeneStudy(geneName):
 		fasta.close()
 		for line in bebfile.readlines():
 			pos=line.rstrip().split("\t")[0]
-			print(geneName+':'+pos)
+			#print(geneName+':'+pos)
 			if pos=='':
-				break
-			posFile=open(pos+'.uniprot.bed','w')
-			with open('../uniprot.bed','r') as uniprot:
+				continue
+			else:
+				pos=posDict[pos]
+			posFile=open(pos+'.uniprot.tab','w')
+			with open('../uniprot.tab','r') as uniprot:
 				head=None
 				for feature in uniprot.readlines():
 					featureList=feature.rstrip().split("\t")
@@ -183,9 +206,9 @@ else:
 cmdGeneral.append('cp '+rootedDir.results+'/testsResults_raw.tab tests.tab')
 
 if args.adj=='yes':
-	cmdGeneral.append('cp '+rootedDir.results+'/venn_padj.pdf venn.pdf')
+	cmdGeneral.append('cp '+rootedDir.results+'/venn_padj.jpg venn.pdf')
 else:
-	cmdGeneral.append('cp '+rootedDir.results+'/venn_pval.pdf venn.pdf')
+	cmdGeneral.append('cp '+rootedDir.results+'/venn_pval.jpg venn.pdf')
 submitShell(cmdGeneral)
 
 #TODO ADD GENEGROUPFILTER
@@ -204,13 +227,13 @@ with open(rootedDir.reports+'/geneMethods.tab','r') as statFile:
 		else:
 			if lineList[head['BranchSites']]=='TRUE':
 				geneDict[lineList[head['gene_name']]]='bs'
-				print(lineList[head['gene_name']])
+				#print(lineList[head['gene_name']])
 			elif lineList[head['Branch']]=='TRUE':
 				geneDict[lineList[head['gene_name']]]='pass'
 			else:
 				geneDict[lineList[head['gene_name']]]='no'
 Report(args.general_rmd,'',args.general_biblio)
+
 for key in geneDict:
 	if geneDict[key]!='no':
 		byGeneStudy(key)
-

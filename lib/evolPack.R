@@ -65,7 +65,6 @@ getMethodsResults=function(tests_df,tests,alpha){
   bfree_M0=subset(tests_df,!is.na(tests_df[,'b_free vs M0']))
   bsA_M1=subset(tests_df,!is.na(tests_df[,'bsA vs M1']))
   bsA_bsA1=subset(tests_df,!is.na(tests_df[,'bsA vs bsA1']))
-  print(str(bfree_M0))
   new_df=bfree_M0[,c('gene_name','target')]
 
   bfree_M0$pM0=FALSE
@@ -84,14 +83,6 @@ getMethodsResults=function(tests_df,tests,alpha){
 
 
   for (i in 1:dim(new_df)[1]) {
-  print(str(new_df[i,]))
-  print(str(bfree_M0[i,]))
-  print(str(bsA_M1[i,]))
-  print(str(bsA_bsA1[i,]))
-  print(bfree_M0[i,'b_free vs M0'])
-  print(bfree_M0$pM0[i])
-  print(bsA_M1[i,'bsA vs M1'])
-  print(bsA_bsA1[i,'bsA vs bsA1'])
     if (    ( bfree_M0[i,'b_free vs M0']<alpha )  &  ( bfree_M0$pM0[i]==T )  ){
       new_df$Branch[i]=T
     }

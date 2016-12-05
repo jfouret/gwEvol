@@ -3,7 +3,7 @@ author='Julien FOURET'
 contact='julien.fouret@fouret.me'
 year='2016'
 version='SEDMATCHGITVERSION'
-
+gitRepository='SEDMATCHGITREPO'
 startMessage=paste('Perform Log-likelihood ratio tests for positive selection analysis '," ; Version : ",version," ; ",year," ; Author : ",author," for more informations or enquiries please contact ",contact," (WARNING: pval and FC column names must begin respectively with 'p.val' and 'FC')",sep='')
 suppressMessages(library("argparse"))
 parser <- ArgumentParser(description=startMessage)
@@ -11,16 +11,6 @@ parser$add_argument("-outDir",
                     type="character",
                     metavar="/path",
                     help="output directory for the whole analysis")
-parser$add_argument("-evolPack",
-                    type="character",
-		    default='SEDEVOLPACK',
-                    metavar="/path",
-                    help="EvolPack R package path")
-parser$add_argument("-vennPack",
-                    type="character",
-                    default='SEDVENNPACK',
-  		    metavar="/path",
-                    help="Venn R package path")
 parser$add_argument("-pval",
                     type="character",
                     default='0.05',
@@ -38,8 +28,8 @@ suppressMessages(library(gridExtra))
 suppressMessages(library(cowplot))
 suppressMessages(library(gplots))
 suppressMessages(library(tidyr))
-suppressMessages(source(args$evolPack))
-suppressMessages(source(args$vennPack))
+suppressMessages(source(paste(gitRepository,'/lib/evolPack.R',sep='')))
+suppressMessages(source(paste(gitRepository,'/lib/venn.R',sep='')))
 suppressMessages(library(R.utils))
 
 #DEFINE PARAMETERS

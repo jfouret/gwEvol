@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description='extract results from positive sele
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
 parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="list of model to be computed")
 parser.add_argument('-pval', metavar='N.NN', required=False,default='0.05', help="pvalue")
-args=parser.parse_args
+args=parser.parse_args()
 
 # import libraries
 import re
