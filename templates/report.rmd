@@ -87,9 +87,6 @@ Immuno-virology		|innate immunity,inate immune,virus,viral,immune response
 Neurology		|brain damage,encephalitis,neuropathology,neurological disease,neurological disorder
 
 
-
-
-
 ### Functional annotation
 
 ### Importance of the site under positive selection
@@ -104,15 +101,12 @@ geneTest <- reshape(geneTest,
   direction = "wide")
 ```
 
-# pre-filtered analysis
+# Results
 
-## Genes under positive selection
+## Genes under positive selection by methods
 
-<div id="pdf">
-  <object width="700" height="500" type="application/pdf" data="./venn.pdf?#zoom=85&scrollbar=0&toolbar=0&navpanes=0" id="pdf_content">
-    <p>Insert your error message here, if the PDF cannot be displayed.</p>
-  </object>
-</div>
+![Venn diagram comparing branch and branch-site approaches](.venn.jpg)
+
 
 ## Enrichment analysis
 
@@ -121,7 +115,7 @@ geneTest <- reshape(geneTest,
 ```{r}
 N=dim(geneList)[1]
 peg=subset(geneList,(Branch==T)|(BranchSites==T))$gene_name
-go=read.delim(file='/export/work/batnipah/phylogeny/alignments/knownCanonical_Zhang2/reports/go.tab',sep="\t",header=T)
+go=read.delim(file='go.tab',sep="\t",header=T)
 go$pval=NA
 go$PSgenes=''
 go$Ngenes=NA
@@ -129,6 +123,7 @@ go$NPSgenes=NA
 k=length(peg)
 for (i in 1:dim(go)[1]){
   goGenes=unlist(strsplit(as.character(go[i,'genes']), split=","))
+  goGenes=intersect(goGenes,geneList$gene_name)
   overlap=intersect(goGenes,peg)
   x=length(overlap)
   m=length(goGenes)
@@ -175,7 +170,7 @@ kable(subset(go,(qval_BH<0.05)&(type=='cellular_component')))
 ```{r}
 N=dim(geneList)[1]
 peg=subset(geneList,(Branch==T)|(BranchSites==T))$gene_name
-kegg=read.delim(file='/export/work/batnipah/phylogeny/alignments/knownCanonical_Zhang2/reports/kegg.tab',sep="\t",header=T)
+kegg=read.delim(file='kegg.tab',sep="\t",header=T)
 kegg$pval=NA
 kegg$PSgenes=''
 kegg$Ngenes=NA
@@ -183,6 +178,7 @@ kegg$NPSgenes=NA
 k=length(peg)
 for (i in 1:dim(kegg)[1]){
   keggGenes=unlist(strsplit(as.character(kegg[i,'genes']), split=","))
+  keggGenes=intersect(keggGenes,geneList$gene_name)
   overlap=intersect(keggGenes,peg)
   x=length(overlap)
   m=length(keggGenes)

@@ -33,15 +33,6 @@ addlink=function(vector,prefix){
 </div>
 
 
-```{r}
-
-data_aln=read.table('algn_quality.tab',header=T)
-
-kable(data_aln)
-
-```
-
-
 
 # Bibliography statistics
 
@@ -81,7 +72,7 @@ getBiblio=function(item,level){
 #KEGG
 
 ```{r}
-kegg=read.table('kegg.bed',header=TRUE,sep="\t")
+kegg=read.table('kegg.tab',header=TRUE,sep="\t")
 
 ```
 
@@ -100,7 +91,7 @@ if (dim(kegg)[1]!=0){
 #GO
 
 ```{r}
-go=read.table('go.bed',header=TRUE,sep="\t")
+go=read.table('go.tab',header=TRUE,sep="\t")
 
 ```
 
@@ -163,7 +154,7 @@ if (file.exists('bs/BEB.tab')==TRUE){
       
         cat("#### Uniprot annotation \n\n")
       
-        uniprot=read.table(paste('bs/',pos,'.uniprot.bed',sep=''),sep="\t",header=T)
+        uniprot=read.table(paste('bs/',pos,'.uniprot.tab',sep=''),sep="\t",header=T)
         uniprot$geneSymbol=NULL
         uniprot$OutOfRange=NULL
         print(kable(uniprot,format='markdown'))
@@ -191,7 +182,7 @@ if (file.exists('bs/BEB.tab')==TRUE){
       
         cat("#### Uniprot annotation \n\n")
       
-        uniprot=read.table(paste('bs/',pos,'.uniprot.bed',sep=''),sep="\t",header=T)
+        uniprot=read.table(paste('bs/',pos,'.uniprot.tab',sep=''),sep="\t",header=T)
         uniprot$geneSymbol=NULL
         uniprot$OutOfRange=NULL
         print(kable(uniprot,format='markdown'))

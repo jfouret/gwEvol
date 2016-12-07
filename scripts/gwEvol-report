@@ -16,6 +16,7 @@ parser.add_argument('-general_biblio', metavar='/path',default=gitRepository+'/t
 parser.add_argument('-gene_rmd', metavar='/path',default=gitRepository+'/summary.rmd', required=False, help="path of gene rmd file")
 parser.add_argument('-adj', metavar='/path', default='yes',required=False, help="yes if adjusment, anything else for no adjustment")
 parser.add_argument('-genePythia', metavar='/path', default='SEDMATCHGENEPYTHIA',required=False, help="script for bibliography")
+
 args=parser.parse_args()
 ### import
 from Bio.Seq import Seq
@@ -31,6 +32,10 @@ from jupype import *
 #variable in args
 rootedDir=loadRoot(args.outDir)
 alnRepo=os.path.abspath(args.aln_dir)
+
+def tcod(strNucl):
+	# from nucl position to codon position
+	return str(((int(strNucl)+2)/3))
 
 ###Put in a separate function
 def getOpt(fileName,module,option):
@@ -61,11 +66,10 @@ def Report(rmdFile,gene,biblio='None',jobID=None):
 	cmdList.append('rm *.rmd')
 	submitQsubWithPBS(createPBS(cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir,waitList=jobID))
 
-
 def readBEB(geneName):
 	global rootedDir
 	fileName=glob.glob(rootedDir.paml+'/'+geneName+'/*/bsA.*/out')[0]
-	file=open(fileList[0],'r')
+	file=open(fileName,'r')
 	BEB=""
 	level=0
 	for line in file.readlines():
@@ -75,7 +79,8 @@ def readBEB(geneName):
 		if level==2:
 			if line=='':
 				level=3
-			BEB=BEB+"\t".join(line.lstrip().split(' '))+"\n"
+			else:
+				BEB=BEB+"\t".join(line.lstrip().split(' '))+"\n"
 		if level==1:
 			level=2
 		if line=='Bayes Empirical Bayes (BEB) analysis (Yang, Wong & Nielsen 2005. Mol. Biol. Evol. 22:1107-1118)':
@@ -91,7 +96,7 @@ reGeneName=re.compile('^(dup[0-9]+_)*([kg_]*[rs_]*[sp_]*)(.*)$')
 
 #consNameDict=
 consNameDict=dict()
-with open(aln_dir+'/reports/consNameDict.tab','r') as consNameDictFile:
+with open(args.aln_dir+'/reports/consNameDict.tab','r') as consNameDictFile:
 	for line in consNameDictFile.readlines():
 		key,value=line.rstrip().split("\t")
 		consNameDict[key]=value
@@ -107,14 +112,14 @@ def byGeneStudy(geneName):
 	workdir=rootedDir.reports+'/'+geneName
 	mkdirp(workdir)
 	cmdList=['cd '+workdir]
-	annotPath=consNameDict[geneName]+'annotation'
+	annotPath=consNameDict[geneName]+'/annotation'
 	seqPath=consNameDict[geneName]+'/'+args.filter
 	cmdList.append('ln -sf '+annotPath+'/uniprot.tab uniprot.tab')
 	cmdList.append('ln -sf '+annotPath+'/name.tab name.tab')
 	cmdList.append('ln -sf '+seqPath+' algn')
 	cmdList.append('ln -sf '+annotPath+'/kegg.tab kegg.tab')
 	cmdList.append('ln -sf '+annotPath+'/go.tab go.tab')
-	cmdList.append('ln -sf '+annotPath+'/alias.tab alias.tab')
+	cmdList.append('ln -sf '+annotPath+'/alias.txt alias.txt')
 	prefixTerm={
 		'nipah':'\'nipah,paramyxovirus,paramyxoviridae,hendra,hennipavirus\'',
 		'immunoviro':'\'innate immunity,innate immune,virus,viral,immune response\'',
@@ -125,27 +130,29 @@ def byGeneStudy(geneName):
 	for prefix,term in prefixTerm.iteritems():
 		options={
 			'-gene':reGeneName.match(geneName).group(3),
-			'-alias':'alias.tab',
+			'-alias':'alias.txt',
 			'-prefix':prefix,
 			'-term':term
 		}
 		cmdListPBS.append(genepythia.create(workdir,options))
 	submitShell(cmdList)
-	jobID=submitQsubWithPBS(createPBS(cmdListPBS,geneName+'_biblio',rootedDir.pbsLogs+'/'+geneName+'_biblio.e',rootedDir.pbsLogs+'/'+geneName+'_biblio.o',workdir=workdir))
+	#jobID=submitQsubWithPBS(createPBS(cmdListPBS,geneName+'_biblio',rootedDir.pbsLogs+'/'+geneName+'_biblio.e',rootedDir.pbsLogs+'/'+geneName+'_biblio.o',workdir=workdir))
 	#viewAlgn('algn.fa','algn',geneName)  # voir GRAPH
 
 	# TODO posDict!!! key = block and value = ref if . give last in  no . for block
 	old_ref=1
 	posDict=dict()
-	with open('algn/posDict.tab') as posDictFile:
+	posAlnDict=dict()
+	with open(workdir+'/algn/posDict.tab') as posDictFile:
 		posDictFile.readline()
-		for line in posDictFile.readlines()
+		for line in posDictFile.readlines():
 			ref,aln,exon,block=line.rstrip().split("\t")
 			if block != '' and block != '.':
+				posAlnDict[tcod(block)]=tcod(aln)
 				if ref=='.':
-					posDict[block]=old_ref
+					posDict[tcod(block)]=tcod(old_ref)
 				else:
-					posDict[block]=ref
+					posDict[tcod(block)]=tcod(ref)
 					old_ref=ref
 	if geneDict[geneName]=='bs':
 		mkdirp(workdir+'/bs')
@@ -153,7 +160,7 @@ def byGeneStudy(geneName):
 		readBEB(geneName)
 		bebfile=open('BEB.tab','r')
 		algn=dict()
-		fasta=open('algn/codon_aln_blocks.fa','r')
+		fasta=open('../algn/codon_aln_blocks.fa','r')
 		for line2 in fasta.readlines():
 			line2=line2.rstrip()
 			if line2[:1]=='>':
@@ -164,11 +171,11 @@ def byGeneStudy(geneName):
 		fasta.close()
 		for line in bebfile.readlines():
 			pos=line.rstrip().split("\t")[0]
+			refpos=posDict[pos]
+			alnpos=posAlnDict[pos]
 			#print(geneName+':'+pos)
 			if pos=='':
 				continue
-			else:
-				pos=posDict[pos]
 			posFile=open(pos+'.uniprot.tab','w')
 			with open('../uniprot.tab','r') as uniprot:
 				head=None
@@ -181,7 +188,7 @@ def byGeneStudy(geneName):
 						for var in featureList:
 							head[var]=index
 							index+=1
-					elif eval(pos)>eval(featureList[head['start']]) and eval(pos)<=eval(featureList[head['end']]):
+					elif eval(refpos)>eval(featureList[head['start']]) and eval(refpos)<=eval(featureList[head['end']]):
 						posFile.write(feature)
 			posFile.close()
 			alnFile=open(pos+'.aln.tab','w')
@@ -196,7 +203,6 @@ def byGeneStudy(geneName):
 		os.chdir('..')
 	Report(args.gene_rmd,geneName,jobID=[jobID])
 	os.chdir('..')
-
 cmdGeneral=['cd '+rootedDir.reports]
 cmdGeneral.append('cp '+rootedDir.results+'/parameters.tab .')
 if args.adj=='yes':
@@ -204,11 +210,14 @@ if args.adj=='yes':
 else:
 	cmdGeneral.append('cp '+rootedDir.results+'/testsResults_pval.tab geneMethods.tab')
 cmdGeneral.append('cp '+rootedDir.results+'/testsResults_raw.tab tests.tab')
+cmdGeneral.append('ln -sf '+alnRepo+'/reports/go.tab '+rootedDir.reports+'/go.tab')
+cmdGeneral.append('ln -sf '+alnRepo+'/reports/kegg.tab '+rootedDir.reports+'/kegg.tab')
+
 
 if args.adj=='yes':
-	cmdGeneral.append('cp '+rootedDir.results+'/venn_padj.jpg venn.pdf')
+	cmdGeneral.append('cp '+rootedDir.results+'/venn_padj.jpg venn.jpg')
 else:
-	cmdGeneral.append('cp '+rootedDir.results+'/venn_pval.jpg venn.pdf')
+	cmdGeneral.append('cp '+rootedDir.results+'/venn_pval.jpg venn.jpg')
 submitShell(cmdGeneral)
 
 #TODO ADD GENEGROUPFILTER
