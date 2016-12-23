@@ -11,9 +11,9 @@ parser = argparse.ArgumentParser(description='Make reports for phylo',epilog="Ve
 parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories")
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
 parser.add_argument('-filter', metavar='name', required=True, help="Name of the filter used in gwAlign")
-parser.add_argument('-general_rmd', metavar='/path',default=gitRepository+'/template/report.rmd', required=False, help="path of general rmd file")
-parser.add_argument('-general_biblio', metavar='/path',default=gitRepository+'/template/positiveSelection.bibtex', required=False, help="path of general bibliography file")
-parser.add_argument('-gene_rmd', metavar='/path',default=gitRepository+'/summary.rmd', required=False, help="path of gene rmd file")
+parser.add_argument('-general_rmd', metavar='/path',default=gitRepository+'/templates/report.rmd', required=False, help="path of general rmd file")
+parser.add_argument('-general_biblio', metavar='/path',default=gitRepository+'/templates/positiveSelection.bibtex', required=False, help="path of general bibliography file")
+parser.add_argument('-gene_rmd', metavar='/path',default=gitRepository+'/templates/summary.rmd', required=False, help="path of gene rmd file")
 parser.add_argument('-adj', metavar='/path', default='yes',required=False, help="yes if adjusment, anything else for no adjustment")
 parser.add_argument('-genePythia', metavar='/path', default='SEDMATCHGENEPYTHIA',required=False, help="script for bibliography")
 
@@ -28,6 +28,10 @@ import subprocess
 import copy
 import re
 from jupype import *
+
+#TEMPORARY !!!!
+jobID=None
+
 
 #variable in args
 rootedDir=loadRoot(args.outDir)
@@ -64,7 +68,8 @@ def Report(rmdFile,gene,biblio='None',jobID=None):
 		cmdList.append('cp '+biblio+' .')
 	cmdList.append('rmd=$(ls *rmd);Rscript -e "rmarkdown::render(\'${rmd}\')"')
 	cmdList.append('rm *.rmd')
-	submitQsubWithPBS(createPBS(cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir,waitList=jobID))
+	submitQsubWithPBS(createPBS(cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir))
+	#submitQsubWithPBS(createPBS(cmdList,gene+'_rep',rootedDir.pbsLogs+'/'+gene+'_rep.e',rootedDir.pbsLogs+'/'+gene+'_rep.o',workdir=workdir,waitList=jobID))
 
 def readBEB(geneName):
 	global rootedDir
