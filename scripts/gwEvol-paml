@@ -5,18 +5,50 @@ gitRepository='SEDMATCHGITREPO'
 version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
-contact='julien.fouret12@uniagro.fr'
-parser = argparse.ArgumentParser(description='perform positive selection analysis via qsub submitting',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-aln_dir', metavar='/path', required=True, help="alignement repositories (a folder with all alignments for each gene name named 'GeneName-ID.fa' or '.fna' or '.fasta')")
-parser.add_argument('-mark', metavar='ete3_mark', required=True, help="branch(es) to mark as target for positive selection analysis (using names in the tree)")
-parser.add_argument('-tree', metavar='tree.nh', required=True, help="Tree file with newick format")
-parser.add_argument('-filter', metavar='name', required=True, help="name of the filter used by gwAlign suite")
-parser.add_argument('-outDir', metavar='/path', required=True, help="Output directory")
-parser.add_argument('-queue', metavar='name',default='SEDMATCHQUEUE', required=False, help="Queue for qsub")
-parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="list of model to be computed")
-parser.add_argument('-batch', metavar='N',default='20', required=False, help="number of genes per batch")
-parser.add_argument('-minSize', metavar='N',default='12', required=False, help="number of base minimun for using an alignment")
-parser.add_argument('-ete3', metavar='/path',default='SEDMATCHETE3', required=False, help="Path of ete3 software")
+contact='julien.fouret@fouret.me'
+parser = argparse.ArgumentParser(description="""
+
+
+#-----------------------|gwEvol-paml|-----------------------#
+
+     Genome-wide screening of coding sequences with PAML
+-------------------------------------------------------------
+This software serializes genome-wide analyses of molecular ev-
+olution on HPC infrastructure. All coding sequences are expec-
+ted to be produced using gwAlign-Unify. 
+
+The ete3 software is needed to drive PAML analysis. 
+
+All models available in ete3 can be runned. However default
+arguments will only run models necessary for Branch and 
+Branch-site positive selection analyses.
+
+
+""",epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('-aln_dir', metavar='/path', required=True, help="""
+MSAs repository produced with gwAlign-Unify""")
+parser.add_argument('-mark', metavar='ete3_mark', required=True, help="""
+branch(es) to mark as target (through ete3) for positive selection analysis (using names in the tree)""")
+parser.add_argument('-tree', metavar='tree.nh', required=True, help="""
+Tree file with newick format""")
+parser.add_argument('-filter', metavar='name', required=False,default='default_filter', help="""
+Matching the -name argument provided to gwAlign-Unify -mode stat_filter
+(default='default_filter')""")
+parser.add_argument('-outDir', metavar='/path', required=True, help="""Output directory""")
+parser.add_argument('-queue', metavar='name',default=None, required=False, help="""Queue/partition for HPC
+(default=None)""")
+parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="""
+List of model (ete3 names) to be computed
+(default='M0,b_free,M1,bsA1,bsA')
+""")
+parser.add_argument('-batchLim', metavar='N',default='20', required=False, help="""
+number of genes per jobs
+(default='20')
+""")
+parser.add_argument('-minSize', metavar='N',default='12', required=False, help="""
+number of base minimun for using an alignment""") # should be removed and handled directly by gwAlign
+parser.add_argument('-ete3', metavar='/path',default='SEDMATCHETE3', required=False, help="""
+Path of ete3 software""")
 parser.add_argument('-v',action='store_true', help="verbose")
 args=parser.parse_args()
 
@@ -24,9 +56,8 @@ import re
 import os
 import subprocess
 import sys
-from jupype import *
-#TODO ARGS.TARGET ==> ARGS.FILTER
-# Define root directory and logs
+from upype import *
+
 rootedDir=RootDir(args.outDir,True,{'paml':str})
 rootedDir.logs.writeArgs(args)
 
@@ -40,7 +71,6 @@ modelList=args.models.split(',')
 prefix=args.filter
 
 ete3=Command('ete3',path=args.ete3)
-ete3.log()
 
 filterPathDict=dict()
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
