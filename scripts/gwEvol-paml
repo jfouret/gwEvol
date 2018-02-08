@@ -1,16 +1,13 @@
-#!/usr/bin/python
+#!/bin/env python
 import argparse
 #add gitRepository
-gitRepository='SEDMATCHGITREPO'
 version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
 contact='julien.fouret@fouret.me'
 parser = argparse.ArgumentParser(description="""
 
-
 #-----------------------|gwEvol-paml|-----------------------#
-
      Genome-wide screening of coding sequences with PAML
 -------------------------------------------------------------
 This software serializes genome-wide analyses of molecular ev-
@@ -47,8 +44,6 @@ number of genes per jobs
 """)
 parser.add_argument('-minSize', metavar='N',default='12', required=False, help="""
 number of base minimun for using an alignment""") # should be removed and handled directly by gwAlign
-parser.add_argument('-ete3', metavar='/path',default='SEDMATCHETE3', required=False, help="""
-Path of ete3 software""")
 parser.add_argument('-v',action='store_true', help="verbose")
 args=parser.parse_args()
 
@@ -59,10 +54,9 @@ import sys
 from upype import *
 
 rootedDir=RootDir(args.outDir,True,{'paml':str})
-rootedDir.logs.writeArgs(args)
 
 # Define variable and process arguments
-batch=int(args.batch)
+batch=int(args.batchLim)
 treeFile=os.path.abspath(args.tree)
 alnRepo=os.path.abspath(args.aln_dir)
 mark=args.mark
@@ -70,21 +64,16 @@ minSize=int(args.minSize)
 modelList=args.models.split(',')
 prefix=args.filter
 
-ete3=Command('ete3',path=args.ete3)
+ete3=rootedDir.addCommand('ete3','ete3 version | sed 's/ Tools.*$//g'')
 
 filterPathDict=dict()
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
 	#Change for name in keys!
 	for line in kgPathDictFile.readlines():
 		key,value=line.rstrip().split("\t")
-		with open(value+'/annotation/consName.txt') as consNameFile:
-			newKey=consNameFile.readline().rstrip()
-		filterPathDict[newKey]=value+'/'+prefix
+		filterPathDict[key]=value+'/'+prefix
 
-cmdList=list()
-iterBatch=1
-Nlim=int(args.batch)
-N=0
+rootedDir.addSerializer("gwAlign_blast_search",Nlim,queue=args.queue,ncpus='1',mem="2gb",workdir=rootedDir.results)
 
 for symbol in filterPathDict.keys():
 	genePath=rootedDir.paml+'/'+symbol
