@@ -73,10 +73,10 @@ rootedDir.addSerializer("gwEvol_paml",Nlim,queue=args.queue,ncpus='1',mem="2gb",
 cmdList=list()
 for symbol in filterPathDict.keys():
 	genePath=rootedDir.paml+'/'+symbol
-	alnPath=filterPathDict[symbol]+'/'+args.filter+"/tcs_filtered_aln.fa"
+	alnPath=filterPathDict[symbol]+"/tcs_filtered_aln.fa"
 	### check min Size
 	if not os.path.exists(alnPath):
-		err_logger("::gwEvol::No alignment available for "+symbol)
+		err_logger("::gwEvol::No alignment available for "+symbol+ "at "+alnPath)
 		continue
 	mkdirp(genePath)
 	opt={
