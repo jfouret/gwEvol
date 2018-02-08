@@ -20,7 +20,6 @@ All models available in ete3 can be runned. However default
 arguments will only run models necessary for Branch and 
 Branch-site positive selection analyses.
 
-
 """,epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-aln_dir', metavar='/path', required=True, help="""
 MSAs repository produced with gwAlign-Unify""")
@@ -56,7 +55,7 @@ from upype import *
 rootedDir=RootDir(args.outDir,True,{'paml':str})
 
 # Define variable and process arguments
-batch=int(args.batchLim)
+Nlim=int(args.batchLim)
 treeFile=os.path.abspath(args.tree)
 alnRepo=os.path.abspath(args.aln_dir)
 mark=args.mark
@@ -73,49 +72,31 @@ with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
 		key,value=line.rstrip().split("\t")
 		filterPathDict[key]=value+'/'+prefix
 
-rootedDir.addSerializer("gwAlign_blast_search",Nlim,queue=args.queue,ncpus='1',mem="2gb",workdir=rootedDir.results)
-
+rootedDir.addSerializer("gwEvol_paml",Nlim,queue=args.queue,ncpus='1',mem="2gb",workdir=rootedDir.paml)
+cmdList=list()
 for symbol in filterPathDict.keys():
 	genePath=rootedDir.paml+'/'+symbol
-	alnPath_raw=filterPathDict[symbol]+'/codon_aln_blocks.fa'
-	alnPath_paml=filterPathDict[symbol]+'/codon_aln_blocks_paml.fa'
+	alnPath=filterPathDict[symbol]+'/'+args.filter+"/tcs_filtered_aln.fa"
 	### check min Size
-	if os.path.exists(alnPath_raw):
-		with open(alnPath_raw,'r') as alnFile:
-			line=alnFile.readline()
-			line=alnFile.readline().rstrip()
-			if len(line)<=minSize:
-				error='Filtering codon_aln_blocks.fa too short '+symbol+' see path: '+filterPathDict[symbol]+"\n"
-				writeErrOut('ERROR', 'error handling included in the script gwEvol-paml', filterPathDict[symbol]+'/codon_aln_blocks.fa screen', 'Gene: '+symbol, error)
-				continue
-	else:
-		error='Warning no codon_aln_blocks.fa for '+symbol+' see path: '+filterPathDict[symbol]+"\n"
-		writeErrOut('ERROR', 'error handling included in the script gwEvol-paml', filterPathDict[symbol]+'/codon_aln_blocks.fa screen', 'Gene: '+symbol, error)
+	if not os.path.exists(alnPath):
+		err_logger("::gwEvol::No alignment available for "+symbol)
 		continue
 	mkdirp(genePath)
 	opt={
 		'--noimg':'',
 		'-t':treeFile,
-		'--alg':alnPath_paml,
+		'--alg':alnPath,
 		'-o':prefix,
 		'--mark':mark,
 		'--cpu':'1'
 	}
 	pos=['1> '+prefix+'.out','2> '+prefix+'.err']
-	cmdList.append('sed -e \'s/!/-/g\' '+alnPath_raw+' > '+alnPath_paml)
 	for model in modelList:
 		opt['--models']=model
-		cmdList.append(ete3.create(genePath,opt,pos,subprogram='evol'))
-	N+=1
-	if N==Nlim:
-		batchName='gwEvol_paml_'+str(iterBatch)
-		submitQsubWithPBS(createPBS(cmdList,batchName,queue=args.queue,workdir=rootedDir.paml))
-		N=0
-		iterBatch+=1
-		cmdList=list()
-if N!=0:
-	batchName='gwEvol_paml_'+str(iterBatch)
-	submitQsubWithPBS(createPBS(cmdList,batchName,queue=args.queue,workdir=rootedDir.paml))
+		cmdList.append(rootedDir.addCommand('ete3',genePath,opt,pos,subprogram='evol'))
+	rootedDir.serialize("gwEvol_paml",cmdList)
+	cmdList=list()
+rootedDir.finishSerializer("gwEvol_paml")
 
 # save rootedDir and save logs then exit
 saveRoot(rootedDir)
