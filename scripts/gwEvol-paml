@@ -90,7 +90,7 @@ for symbol in filterPathDict.keys():
 	pos=['1> '+prefix+'.out','2> '+prefix+'.err']
 	for model in modelList:
 		opt['--models']=model
-		cmdList.append(rootedDir.addCommand('ete3',genePath,opt,pos,subprogram='evol'))
+		cmdList.append(rootedDir.getCommand('ete3',genePath,opt,pos,subprogram='evol'))
 	rootedDir.serialize("gwEvol_paml",cmdList)
 	cmdList=list()
 rootedDir.finishSerializer("gwEvol_paml")
