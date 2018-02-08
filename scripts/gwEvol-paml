@@ -41,7 +41,6 @@ parser.add_argument('-batchLim', metavar='N',default='20', required=False, help=
 number of genes per jobs
 (default='20')
 """)
-number of base minimun for using an alignment""") # should be removed and handled directly by gwAlign
 parser.add_argument('-v',action='store_true', help="verbose")
 args=parser.parse_args()
 
