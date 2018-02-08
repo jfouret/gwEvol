@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 import argparse
 #add gitRepository
 version='SEDMATCHGITVERSION'
@@ -20,7 +20,7 @@ All models available in ete3 can be runned. However default
 arguments will only run models necessary for Branch and 
 Branch-site positive selection analyses.
 
-""",epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+""",epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-aln_dir', metavar='/path', required=True, help="""
 MSAs repository produced with gwAlign-Unify""")
 parser.add_argument('-mark', metavar='ete3_mark', required=True, help="""
@@ -41,7 +41,6 @@ parser.add_argument('-batchLim', metavar='N',default='20', required=False, help=
 number of genes per jobs
 (default='20')
 """)
-parser.add_argument('-minSize', metavar='N',default='12', required=False, help="""
 number of base minimun for using an alignment""") # should be removed and handled directly by gwAlign
 parser.add_argument('-v',action='store_true', help="verbose")
 args=parser.parse_args()
@@ -59,11 +58,10 @@ Nlim=int(args.batchLim)
 treeFile=os.path.abspath(args.tree)
 alnRepo=os.path.abspath(args.aln_dir)
 mark=args.mark
-minSize=int(args.minSize)
 modelList=args.models.split(',')
 prefix=args.filter
 
-ete3=rootedDir.addCommand('ete3','ete3 version | sed 's/ Tools.*$//g'')
+rootedDir.addCommand('ete3',"ete3","ete3 version | sed 's/ Tools.*$//g'")
 
 filterPathDict=dict()
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:

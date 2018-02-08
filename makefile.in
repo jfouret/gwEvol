@@ -13,7 +13,7 @@ installs=$(addprefix ${BINPATH}/,$(prog_install))
 all : $(bins)
 
 $(bins) : bin 
-	sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,scripts/,$@) > $@
+	@sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,scripts/,$@) > $@
 	chmod 755 $@
 
 bin :
