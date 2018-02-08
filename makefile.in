@@ -1,21 +1,19 @@
 
 ### DO NOT CHANGE
 SHELL=bash
-GITETE3=$(shell echo ${ETE3} | sed 's/\//\\\//g')
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
-progs = gwEvol-paml gwEvol-report allInOne.py gwEvol-results positiveSelectionTest.R geneGroupFilter.py checkAlign.py
+progs = gwEvol-paml gwEvol-report gwEvol-results
 bins=$(addprefix bin/,$(progs))
 
 prog_install = gwEvol-paml gwEvol-report gwEvol-results
-installs=$(addprefix ${INSTALLPATH}/,$(prog_install))
+installs=$(addprefix ${BINPATH}/,$(prog_install))
 
 ### makefile core
 all : $(bins)
 
 $(bins) : bin 
-	sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,scripts/,$@) | \
-	sed -e "s/SEDMATCHETE3/${GITETE3}/g" > $@
+	sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,scripts/,$@) > $@
 	chmod 755 $@
 
 bin :
@@ -24,8 +22,9 @@ bin :
 
 .PHONY : install
 install : $(installs)
+
 $(installs) : $(bins)
-	ln -sf $(subst ${INSTALLPATH}/, ${PWD}/bin/, $@) ${INSTALLPATH}
+	ln -sf $(subst ${BINPATH}/, ${PWD}/bin/, $@) ${BINPATH}
 
 .PHONY : uninstall
 uninstall : 
