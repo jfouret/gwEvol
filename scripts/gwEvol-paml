@@ -63,40 +63,50 @@ prefix=args.filter
 
 rootedDir.addCommand('ete3',"ete3","ete3 version | sed 's/ Tools.*$//g'")
 
+def get_closest_leaf_name(tree,leaf_name):
+	leafs=tree.get_terminals()
+	leaf_target=tree.find_clades(name=leaf_name).next()
+	for leaf in leafs:
+		if len(tree.trace(leaf,leaf_target))==2:
+			return(leaf.name)
+
 def tree_reduce(oriTree,oriAln,oriMark):
 	"""
 	@summary: adjust the tree and the mark to be specified in ete3 if there is missing sequences in the alignment.
 	"""
-
 	from Bio import phylo
 	from Bio import AlignIO
 	tree = Phylo.read(oriTree, 'newick')
-	leafs==[x.name for x in tree.get_terminals()]
+	leaf_names==[x.name for x in tree.get_terminals()]
 	aligned_species=[x.name for x in AlignIO.read(oriAln, 'phylip')]
 	import re 
-	comma3=False
-	comma2=False
 	comma1=False
 	m=re.match("(.*),,(.*)",oriMark)
 	if m:
-		comma2=True
+		sep=',,'
 		markList=[m.group(1),m.group(2)]
 	else:
+		sep=',,,'
 		m=re.match("(.*),,,(.*)",oriMark)
 		if m:
-			comma3=True
 			markList=[m.group(1),m.group(2)]
 		else:
+			sep=','
 			comma1=True
 			markList=oriMark.split(",")
-
-	for leaf in leafs:
-		if not leaf in aligned_species:
-			if leaf in markList:
-				if comma1:
-					
+	for i in len(leaf_names):
+		leaf_name=leaf_names[i]
+		if (not leaf_name in aligned_species) (and leaf_name in markList):
+			if not comma1:
+				del markList[i]
+			else:
+				if leaf_name in markList:
+					markList[markList.index(leaf_name)]=get_closest_leaf_name(tree,leaf_name)
+					if markList[0]==markList[1]:
+						del markList[1]
 			tree.prune(leaf)
-
+	newMark=sep.join(markList)
+	return({"tree":tree,"mark":newMark})
 
 filterPathDict=dict()
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
@@ -104,7 +114,6 @@ with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
 	for line in kgPathDictFile.readlines():
 		key,value=line.rstrip().split("\t")
 		filterPathDict[key]=value+'/'+prefix
-
 rootedDir.addSerializer("gwEvol_paml",Nlim,queue=args.queue,ncpus='1',mem="2gb",workdir=rootedDir.paml)
 cmdList=list()
 for symbol in filterPathDict.keys():
@@ -115,17 +124,21 @@ for symbol in filterPathDict.keys():
 		err_logger("::gwEvol::No alignment available for "+symbol+" at "+alnPath)
 		continue
 	mkdirp(genePath)
+	from Bio import Phylo
+	reduced=tree_reduce(treeFile,alnPath,mark)
+	NewTree='tree_reduced.nh'
+	Phylo.write(reduced["tree"],NewTree,"newick")
 	opt={
 		'--noimg':'',
-		'-t':treeFile,
+		'-t':NewTree,
 		'--alg':alnPath,
 		'-o':prefix,
-		'--mark':mark,
+		'--mark':reduced["mark"],
 		'--cpu':'1'
 	}
-	pos=['1> '+prefix+'.out','2> '+prefix+'.err']
 	for model in modelList:
 		opt['--models']=model
+		pos=['1> '+prefix+"_"+model+'.out','2> '+prefix+"_"+model+'.err']
 		cmdList.append(rootedDir.getCommand('ete3',genePath,opt,pos,subprogram='evol'))
 	rootedDir.serialize("gwEvol_paml",cmdList)
 	cmdList=list()
