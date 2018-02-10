@@ -24,6 +24,7 @@ Branch-site positive selection analyses.
 parser.add_argument('-aln_dir', metavar='/path', required=True, help="""
 MSAs repository produced with gwAlign-Unify""")
 parser.add_argument('-mark', metavar='ete3_mark', required=True, help="""
+
 branch(es) to mark as target (through ete3) for positive selection analysis (using names in the tree)""")
 parser.add_argument('-tree', metavar='tree.nh', required=True, help="""
 Tree file with newick format""")
@@ -62,6 +63,41 @@ prefix=args.filter
 
 rootedDir.addCommand('ete3',"ete3","ete3 version | sed 's/ Tools.*$//g'")
 
+def tree_reduce(oriTree,oriAln,oriMark):
+	"""
+	@summary: adjust the tree and the mark to be specified in ete3 if there is missing sequences in the alignment.
+	"""
+
+	from Bio import phylo
+	from Bio import AlignIO
+	tree = Phylo.read(oriTree, 'newick')
+	leafs==[x.name for x in tree.get_terminals()]
+	aligned_species=[x.name for x in AlignIO.read(oriAln, 'phylip')]
+	import re 
+	comma3=False
+	comma2=False
+	comma1=False
+	m=re.match("(.*),,(.*)",oriMark)
+	if m:
+		comma2=True
+		markList=[m.group(1),m.group(2)]
+	else:
+		m=re.match("(.*),,,(.*)",oriMark)
+		if m:
+			comma3=True
+			markList=[m.group(1),m.group(2)]
+		else:
+			comma1=True
+			markList=oriMark.split(",")
+
+	for leaf in leafs:
+		if not leaf in aligned_species:
+			if leaf in markList:
+				if comma1:
+					
+			tree.prune(leaf)
+
+
 filterPathDict=dict()
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
 	#Change for name in keys!
@@ -76,7 +112,7 @@ for symbol in filterPathDict.keys():
 	alnPath=filterPathDict[symbol]+"/tcs_filtered_aln.fa"
 	### check min Size
 	if not os.path.exists(alnPath):
-		err_logger("::gwEvol::No alignment available for "+symbol+ "at "+alnPath)
+		err_logger("::gwEvol::No alignment available for "+symbol+" at "+alnPath)
 		continue
 	mkdirp(genePath)
 	opt={
