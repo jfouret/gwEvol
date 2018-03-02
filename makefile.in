@@ -3,11 +3,12 @@
 SHELL=bash
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
-progs = gwEvol-paml gwEvol-report gwEvol-results
+prog_install = $(shell ls bin | xargs)
+lib_install = $(shell ls lib | xargs)
 bins=$(addprefix bin/,$(progs))
 
-prog_install = gwEvol-paml gwEvol-report gwEvol-results
-installs=$(addprefix ${BINPATH}/,$(prog_install))
+installs_bin=$(addprefix ${BINPATH}/,$(prog_install))
+installs_lib=$(addprefix ${LIBPATH}/,$(lib_install))
 
 ### makefile core
 all : $(bins)
@@ -21,15 +22,22 @@ bin :
 	chmod 755 bin
 
 .PHONY : install
-install : $(installs)
+install : $(installs_bin) $(installs_lib)
 
-$(installs) : $(bins)
+$(installs_bin) : $(bins)
 	ln -sf $(subst ${BINPATH}/, ${PWD}/bin/, $@) ${BINPATH}
+
+$(installs_lib) : 
+	ln -sf $(subst ${LIBPATH}/, ${PWD}/lib/, $@) ${LIBPATH}
 
 .PHONY : uninstall
 uninstall : 
-	rm $(installs)
+	rm $(installs_bin) $(installs_lib)
 
 .PHONY : clean
 clean :
 	-rm -R bin
+
+
+
+
