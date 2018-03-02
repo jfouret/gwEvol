@@ -74,11 +74,12 @@ def tree_reduce(oriTree,oriAln,oriMark):
 	"""
 	@summary: adjust the tree and the mark to be specified in ete3 if there is missing sequences in the alignment.
 	"""
-	from Bio import phylo
+	import sys
+	from Bio import Phylo
 	from Bio import AlignIO
 	tree = Phylo.read(oriTree, 'newick')
-	leaf_names==[x.name for x in tree.get_terminals()]
-	aligned_species=[x.name for x in AlignIO.read(oriAln, 'phylip')]
+	leaf_names=[x.name for x in tree.get_terminals()]
+	aligned_species=[x.name for x in AlignIO.read(oriAln, 'fasta')]
 	import re 
 	comma1=False
 	m=re.match("(.*),,(.*)",oriMark)
@@ -94,21 +95,24 @@ def tree_reduce(oriTree,oriAln,oriMark):
 			sep=','
 			comma1=True
 			markList=oriMark.split(",")
-	for i in len(leaf_names):
+	for i in range(0,len(leaf_names)):
 		leaf_name=leaf_names[i]
-		if (not leaf_name in aligned_species) (and leaf_name in markList):
-			if not comma1:
-				del markList[i]
-			else:
-				if leaf_name in markList:
-					markList[markList.index(leaf_name)]=get_closest_leaf_name(tree,leaf_name)
-					if markList[0]==markList[1]:
-						del markList[1]
-			tree.prune(leaf)
-	newMark=sep.join(markList)
+		if (not leaf_name in aligned_species) :
+			if leaf_name in markList:
+				if comma1:
+					del markList[markList.index(leaf_name)]
+				else:
+					if leaf_name in markList:
+						markList[markList.index(leaf_name)]=get_closest_leaf_name(tree,leaf_name)
+						if markList[0]==markList[1]:
+							del markList[1]
+			tree.prune(leaf_name)
+
+	newMark=sep.join([x for x in markList if x is not None])
 	return({"tree":tree,"mark":newMark})
 
 filterPathDict=dict()
+
 with open(alnRepo+'/reports/kgPathDictFile.tab','r') as kgPathDictFile:
 	#Change for name in keys!
 	for line in kgPathDictFile.readlines():
@@ -126,7 +130,7 @@ for symbol in filterPathDict.keys():
 	mkdirp(genePath)
 	from Bio import Phylo
 	reduced=tree_reduce(treeFile,alnPath,mark)
-	NewTree='tree_reduced.nh'
+	NewTree=genePath+'/tree_reduced.nh'
 	Phylo.write(reduced["tree"],NewTree,"newick")
 	opt={
 		'--noimg':'',
