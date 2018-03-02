@@ -3,18 +3,18 @@
 SHELL=bash
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
 
-prog_install = $(shell ls bin | xargs)
+prog_install = $(shell ls src | xargs)
 lib_install = $(shell ls lib | xargs)
-bins=$(addprefix bin/,$(progs))
+bins=$(addprefix bin/,$(prog_install))
 
 installs_bin=$(addprefix ${BINPATH}/,$(prog_install))
 installs_lib=$(addprefix ${LIBPATH}/,$(lib_install))
 
 ### makefile core
-all : $(bins)
+all : $(bins) 
 
 $(bins) : bin 
-	@sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,scripts/,$@) > $@
+	@sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,src/,$@) > $@
 	chmod 755 $@
 
 bin :
