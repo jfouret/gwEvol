@@ -2,7 +2,7 @@
 ### DO NOT CHANGE
 SHELL=bash
 GITVERSION=$(shell git describe --tags | sed 's/^v//g')
-
+SEDLIBPATH=$(shell echo ${LIBPATH} | sed 's/\//\\\//g')
 prog_install = $(shell ls src | xargs)
 lib_install = $(shell ls lib | xargs)
 bins=$(addprefix bin/,$(prog_install))
