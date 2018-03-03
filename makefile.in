@@ -14,7 +14,9 @@ installs_lib=$(addprefix ${LIBPATH}/,$(lib_install))
 all : $(bins) 
 
 $(bins) : bin 
-	@sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,src/,$@) > $@
+	@sed -e "s/SEDMATCHGITVERSION/${GITVERSION}/g" $(subst bin/,src/,$@) | \ 
+	sed -e "s/SEDMATCHINSTALLLIB/${LIBPATH}/g" > $@
+
 	chmod 755 $@
 
 bin :

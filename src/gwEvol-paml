@@ -2,6 +2,7 @@
 import argparse
 #add gitRepository
 version='SEDMATCHGITVERSION'
+install_lib='SEDMATCHINSTALLLIB'
 year=2016
 author='Julien Fouret'
 contact='julien.fouret@fouret.me'
