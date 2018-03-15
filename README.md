@@ -23,6 +23,25 @@ gwEvol-result	| Run all scripts to get the report and the analyze of a positive 
 
 For help run executable with -h or --help  
 
+# Controling jobs execution
+## Error during job completion related to the scheduler work
+
+```
+
+# number of model tested
+model=5 
+expected=$(echo "3+2*$model" |bc)
+
+for pbs in $(ls schd/gwEvol_paml_*) ; do echo "$pbs" ; status=""; for dir in $(more $pbs | grep 'ete3 evol' | cut -f 1 -d ';' | cut -f 2 -d ' ' | uniq ) ; do status="${status}$(ls $dir | wc -l):" ; done ;echo "$status" ;done | grep -P ':(?!'"$expected"')\d+' -B 1 --no-group-separator 
+
+```
+
+## Error during the job completion related to the job script
+
+```
+for errFile in $(find -name '*.err') ; do [[ -s $errFile ]] && echo $errFile >> errFile.list; done
+
+```
 # Dependencies
 
 * Python 2.7 (or higher but never tested)
