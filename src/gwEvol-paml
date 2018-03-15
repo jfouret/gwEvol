@@ -141,7 +141,7 @@ for symbol in filterPathDict.keys():
 	if ambiguKill_file==None:
 		err_logger(" Warning The file ambiguKill.py in lib paths.")
 		sys.exit(1)
-	cmd.list.append("python "+ambiguKill_file+" -input "+alnPath+" -output "+NewAln+" -seed "+args.seed)
+	cmdList.append("python "+ambiguKill_file+" -input "+alnPath+" -output "+NewAln+" -seed "+args.seed)
 
 	opt={
 		'--noimg':'',
