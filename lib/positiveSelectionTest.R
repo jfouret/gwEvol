@@ -19,6 +19,12 @@ parser$add_argument("-graphSign",
                     action="store_true",
                     default='FALSE',
                     help="graph parameters distribution for all significant results")
+parser$add_argument("-evolPack",
+                    type="character",
+                    help="evolution package")
+parser$add_argument("-venn",
+                    type="character",
+                    help="venn package")
 args <- parser$parse_args()
 
 # LOADING LIBRARIES
@@ -28,8 +34,8 @@ suppressMessages(library(gridExtra))
 suppressMessages(library(cowplot))
 suppressMessages(library(gplots))
 suppressMessages(library(tidyr))
-suppressMessages(source(paste(gitRepository,'/lib/evolPack.R',sep='')))
-suppressMessages(source(paste(gitRepository,'/lib/venn.R',sep='')))
+suppressMessages(source(args$evolPack))
+suppressMessages(source(args$venn))
 suppressMessages(library(R.utils))
 
 #DEFINE PARAMETERS

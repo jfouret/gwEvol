@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import argparse
 #add gitRepository
-gitRepository='SEDMATCHGITREPO'
+install_lib='SEDMATCHINSTALLLIB'
 version='SEDMATCHGITVERSION'
 year=2016
 author='Julien Fouret'
@@ -146,7 +146,10 @@ resultFile.close()
 # command definition and launch statistical testing
 
 r_stat=search_lib('positiveSelectionTest.R')
-rootedDir.submit("Rscript "+r_stat+" -outDir "+rootedDir.path+" -pval "+args.pval)
+r_venn=search_lib('venn.R')
+r_evol=search_lib('evolPack.R')
+
+rootedDir.submit("Rscript "+r_stat+" -outDir "+rootedDir.path+" -pval "+args.pval+" -evolPack "+r_evol)
 
 #save rootedDir and exit
 saveRoot(rootedDir)
