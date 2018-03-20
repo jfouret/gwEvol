@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import argparse
 #add gitRepository
 install_lib='SEDMATCHINSTALLLIB'
@@ -11,9 +11,9 @@ scriptName='getResults.py'
 ##parse argument
 parser = argparse.ArgumentParser(description='extract results from positive selection genome-wide analysis',epilog="Version : "+str(version)+"\n"+str(year)+"\nAuthor : "+author+" for more informations or enquiries please contact "+contact,formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-outDir', metavar='/path', required=True, help="path of the output directory from positive selection analysis")
-parser.add_argument('-models', metavar='model1,model2,...', required=False,default='M0,b_free,M1,bsA1,bsA', help="list of model to be computed")
 parser.add_argument('-pval', metavar='N.NN', required=False,default='0.05', help="pvalue")
-parser.add_argument('-cpu', metavar='N', required=False,default='1', help="number of cpu")
+parser.add_argument('-v', action='store_true', help="verbose")
+
 args=parser.parse_args()
 
 # import libraries
@@ -21,125 +21,120 @@ import re
 import sys
 import glob
 import os
-from jupype import *
-regExOutPath=re.compile('([^\/]+)\/([^\/]+)\/([^\.]+).*\/out')
+from upype import *
+regExOutPath=re.compile('([^\/]+)\/([^\/]+)\/([^\.~]+).*\/out')
 # Function definition to read models paml outputs
 def read_model(path,pattern=regExOutPath):
+	import traceback
+	global args
 	err=""
 	m=pattern.match(path)
 	if m:
 		name=m.group(1)
 		target=m.group(2)
 		model=m.group(3)
-		file=open(path,'r')
+		if args.v : out_logger(" Analyze gene "+name+" | target "+target+" | model "+model)
 		[w0,w1,w2,p0,p1,p2a,p2b,lnL]=['err','err','err','err','err','err','err','err']
-		for line in file:
+		for line in open(path).readlines():
 			newline=line.rstrip('\n')
 			rlnL = re.compile('^lnL\(.*\):[\s]+([^\s]*)')
 			rkappa = re.compile('^kappa.*=[\s]+([^\s]*)')
-
-			if rlnL.match(newline):
+			m=rlnL.match(newline)
+			if m:
 				lnL=rlnL.match(newline).group(1)
-			if rkappa.match(newline):
+			m=rkappa.match(newline)
+			if m:
 				kappa=rkappa.match(newline).group(1)
 			if model == 'b_free':
 				rw = re.compile('^w\s*\(dN.*for branches:\s*([^\s]*)\s([^\s]*)')
-				if rw.match(newline):
+				m=rw.match(newline)
+				if m:
 					w0=rw.match(newline).group(1)
 					w1=rw.match(newline).group(2)
 			elif model == 'M1':
 				rw = re.compile('^w:\s+([^\s]+)\s+([^\s]+)')
-				if rw.match(newline):
+				m=rw.match(newline)
+				if m:
 					w0=rw.match(newline).group(1)
 					w1=rw.match(newline).group(2)
 				rp = re.compile('^p:\s+([^\s]+)\s+([^\s]+)')
-				if rp.match(newline):
+				m=rp.match(newline)
+				if m:
 					p0=rp.match(newline).group(1)
 					p1=rp.match(newline).group(2)
 			elif model == 'bsA':
 				rw = re.compile('^foreground\s+w\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)')
-				if rw.match(newline):
+				m=rw.match(newline)
+				if m:
 					w0=rw.match(newline).group(1)
 					w1=rw.match(newline).group(2)
 					w2=rw.match(newline).group(3)
 				rp = re.compile('^proportion\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)')
-				if rp.match(newline):
+				m=rp.match(newline)
+				if m:
 					p0=rp.match(newline).group(1)
 					p1=rp.match(newline).group(2)
 					p2a=rp.match(newline).group(3)
 					p2b=rp.match(newline).group(4)
 			elif model == 'bsA1':
 				rw = re.compile('^foreground\s+w\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)')
-				if rw.match(newline):
+				m=rw.match(newline)
+				if m:
 					w0=rw.match(newline).group(1)
 					w1=rw.match(newline).group(2)
 					w2=rw.match(newline).group(3)
 					
 				rp = re.compile('^proportion\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)')
-				if rp.match(newline):
+
+				m=rp.match(newline)
+				if m:
 					p0=rp.match(newline).group(1)
 					p1=rp.match(newline).group(2)
 					p2a=rp.match(newline).group(3)
 					p2b=rp.match(newline).group(4)
 			else:
 				romega = re.compile('^omega.*=[\s]*([^\s]*)')
-				if romega.match(newline):
-					omega=romega.match(newline).group(1)
-		file.close
-		if model == 'b_free':
-			toReturn=[name,model,target,w0,w1,'NA','NA','NA','NA','NA',lnL]
-		elif model == 'M1':
-			toReturn=[name,model,'NA',w0,w1,'NA',p0,p1,'NA','NA',lnL]
-		elif model == 'bsA':
-			toReturn=[name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
-		elif model == 'bsA1':	
-			toReturn=[name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
-		else:
-			toReturn=[name,model,'NA',omega,'NA','NA','NA','NA','NA','NA',lnL]
-		if 'err' in toReturn:
-			err=err+"\n"+'WARNING missing paml files for gene '+name+' in target '+target+' with model '+model+"\n"
+				m=romega.match(newline)
+				if m:
+					w0=romega.match(newline).group(1)
+		try:
+			if mo qdel == 'b_free':
+				toReturn=[name,model,target,w0,w1,'NA','NA','NA','NA','NA',lnL]
+			elif model == 'M1':
+				toReturn=[name,model,'NA',w0,w1,'NA',p0,p1,'NA','NA',lnL]
+			elif model == 'bsA':
+				toReturn=[name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
+			elif model == 'bsA1':	
+				toReturn=[name,model,target,w0,w1,w2,p0,p1,p2a,p2b,lnL]
+			else:
+				toReturn=[name,model,'NA',w0,'NA','NA','NA','NA','NA','NA',lnL]
+			if 'err' in toReturn:
+				err=err+"\n"+'WARNING missing paml files ['+fileName+'] for gene '+name+' in target '+target+' with model '+model+"\n"
+		except Exception, e:
+			exc_type, exc_value, exc_tb = sys.exc_info()
+			err=err + " pb relative to "+path+"\n"+"\n".join(traceback.format_exception(exc_type, exc_value, exc_tb))
 	else:
 		err=err+"\n"+'WARNING pattern not matching for file '+path+"\n"
-	return({"res":toReturn,"err":err,"fileName":path})
-
+	return({"res":toReturn,"err":err})
 # loading files structure and logs
 rootedDir=loadRoot(args.outDir)
-rootedDir.logs.writeArgs(args)
-
+#rootedDir.logs.writeArgs(args)
 # variable definition
-resultFileName=rootedDir.results+'/parameters.tab'
-
-resultFile=open(resultFileName,'w')
-resultFile.write('\t'.join(['gene_name','model','target','w0','w1','w2','p0','p1','p2a','p2b','lnL'])+"\n")
-modelList=args.models.split(',')
-
 # step 1 - itering over paml directory to read all output files
 os.chdir(rootedDir.paml)# in paml dir for glob ! ! !
-pool=Pool(processes=cpu)
-jobs=[]
-for fileName in glob.glob('*/*/*/out'):
-	jobs.append(pool.apply_async(read_model,args=(fileName,)))
-	
-pool.close()
 
-if model in modelList:
-			line=read_model(fileName,model,target,name)
-			resultFile.write('\t'.join(line)+"\n")
+resultFileName=rootedDir.results+'/parameters.tab'
+resultFile=open(resultFileName,'w')
+resultFile.write('\t'.join(['gene_name','model','target','w0','w1','w2','p0','p1','p2a','p2b','lnL'])+"\n")
 
-while len(jobs)!=0:
-	for i in range(0,min(cpu+1,len(jobs))):
-		if jobs[i].ready():
-			outjob=jobs[i].get(5)
-			if outjob["err"]=="":
-				if outjob["err"] in modelList:
-					resultFile.write('\t'.join(outjob["err"]))
-				else:
-					err_logger(" Warning unknown model for "+outjob["fileName"])
-			else:
-				err_logger(outjob["err"])
-				#sys.exit(1)
-			del jobs[i]
-			break
+for kgname in os.listdir('.'):
+	#out_logger(" Initialize jobs for gene "+kgname)
+	for fileName in glob.glob(kgname+'/*/*/out'):
+		outjob=read_model(fileName)
+		if outjob["err"]=="":
+			resultFile.write('\t'.join(outjob["res"])+"\n")
+		else:
+			err_logger(outjob["err"])
 
 resultFile.close()
 
@@ -149,7 +144,7 @@ r_stat=search_lib('positiveSelectionTest.R')
 r_venn=search_lib('venn.R')
 r_evol=search_lib('evolPack.R')
 
-rootedDir.submit("Rscript "+r_stat+" -outDir "+rootedDir.path+" -pval "+args.pval+" -evolPack "+r_evol)
+rootedDir.submit("Rscript "+r_stat+" -outDir "+rootedDir.path+" -pval "+args.pval+" -evolPack "+r_evol+ "-venn "+r_venn)
 
 #save rootedDir and exit
 saveRoot(rootedDir)

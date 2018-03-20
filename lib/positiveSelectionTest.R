@@ -52,46 +52,6 @@ data=unique(data)
 data$fmodel=factor(data$model,levels = c('b_free','M0','bsA','bsA1','M1'))
 
 #put in parameters adjustments #TODO
-listdf=evol_tests(data,alpha=as.numeric(args$pval))
-#### listdf 1:tests pval and padj   2: branch and branch-site results for pval     3: branch and branch-site results for padj
-i=1
-typeAdj=c('pval','padj')
-for (allTEST in listdf[2:3]){
-  bANDbs=subset(allTEST,(Branch==T)&(BranchSites==T))
-  b=subset(allTEST,(Branch==T))
-  bs=subset(allTEST,(BranchSites==T))
-  bsONLY=subset(allTEST,(Branch==F)&(BranchSites==T))
-  bONLY=subset(allTEST,(Branch==T)&(BranchSites==F))
-  venn=venn2(names = c('Branch','Branch-sites'),col=c('blue',"orangered"),weigths = c(dim(bONLY)[1],dim(bANDbs)[1],dim(bsONLY)[1]))
-  ggsave(paste('venn_',typeAdj[i],'.pdf',sep=''),venn,width = 8.27, height = 5.83, units = "in")
-  write.table(allTEST,file=paste(testResultsFileName,typeAdj[i],'.tab',sep=''),quote=F,row.names=F,sep="\t")
-  i=i+1
-}
-write.table(listdf[[1]],file=paste(testResultsFileName,'raw','.tab',sep=''),quote=F,row.names=F,sep="\t")
+data_evol=evol_tests(data)
 
-# graph all parameters if needed
-if (args$graphSign==TRUE){
-	dir.create('branch_specific',recursive=T)
-	dir.create('branch-site_specific',recursive=T)
-	dir.create('aspecific',recursive=T)
-	gene_target=unique(cbind(bONLY$gene_name,bONLY$target))
-	for (i in 1:dim(gene_target)[1]){
-    		file=paste('branch_specific/',gene_target[i,1],'_',gene_target[i,2],'.pdf',sep='')
-    		graph=makePhyloGraph(data,gene_target[i,1],gene_target[i,2])
-    		ggsave(file,graph, width = 11.69, height = 8.27, units = "in")
-	}
-
-	gene_target=unique(cbind(bsONLY$gene_name,bsONLY$target))
-	for (i in 1:dim(gene_target)[1]){
-  		file=paste('branch-site_specific/',gene_target[i,1],'_',gene_target[i,2],'.pdf',sep='')
-  		graph=makePhyloGraph(data,gene_target[i,1],gene_target[i,2])
-  		ggsave(file,graph, width = 11.69, height = 8.27, units = "in")
-	}
-
-	gene_target=unique(cbind(bANDbs$gene_name,bANDbs$target))
-	for (i in 1:dim(gene_target)[1]){
-  		file=paste('aspecific/',gene_target[i,1],'_',gene_target[i,2],'.pdf',sep='')
-  		graph=makePhyloGraph(data,gene_target[i,1],gene_target[i,2])
-  		ggsave(file,graph, width = 11.69, height = 8.27, units = "in")
-	}
-}
+write.table(data_evol,file=paste(testResultsFileName,'raw','.tab',sep=''),quote=F,row.names=F,sep="\t")
