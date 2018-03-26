@@ -98,7 +98,7 @@ def read_model(path,pattern=regExOutPath):
 				if m:
 					w0=romega.match(newline).group(1)
 		try:
-			if mo qdel == 'b_free':
+			if model == 'b_free':
 				toReturn=[name,model,target,w0,w1,'NA','NA','NA','NA','NA',lnL]
 			elif model == 'M1':
 				toReturn=[name,model,'NA',w0,w1,'NA',p0,p1,'NA','NA',lnL]
