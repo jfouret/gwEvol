@@ -144,7 +144,7 @@ r_stat=search_lib('positiveSelectionTest.R')
 r_venn=search_lib('venn.R')
 r_evol=search_lib('evolPack.R')
 
-rootedDir.submit("Rscript "+r_stat+" -outDir "+rootedDir.path+" -pval "+args.pval+" -evolPack "+r_evol+ "-venn "+r_venn)
+rootedDir.submit("Rscript "+r_stat+" -outDir "+rootedDir.path+" -alpha "+args.pval)
 
 #save rootedDir and exit
 saveRoot(rootedDir)
